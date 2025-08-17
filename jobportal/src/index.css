@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .container-global {
+    max-width: 100%;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  :root {
+    /* Font sizes */
+    --heading-xl: 3rem;
+
+    --heading-lg: 2rem;
+
+    --description-lg: 1.2rem;
+
+    --description-sm: 1rem;
+
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(90deg, #1B3890, #0F79C5);
+    --gradient-secondary: linear-gradient(45deg, #0F79C5, #1B3890);
+    --gradient-soft-bg: linear-gradient(to bottom right, #f8fafc, #ebf8ff, #e0e7ff);
+
+    /* Colors */
+    --color-primary: #1B3890;
+    --color-secondary: #0F79C5;
+
+    /* Text muted colors */
+    --text-muted: #a8aeae;
+    --gray-muted-light: #8f9292;
+    --gray-muted-dark: #6b6f70;
+  }
+
+  @layer components {
+    .bg-gradient-primary {
+      background: var(--gradient-primary);
+    }
+
+      .bg-gradient-soft{
+    background: var(--gradient-soft-bg);
+  }
+
+    .text-heading-xl {
+      font-size: var(--heading-xl);
+      line-height: 1.2;
+      letter-spacing: 0.1rem;
+      font-weight: bold;
+    }
+
+    .text-heading-lg {
+      font-size: var(--heading-lg);
+      line-height: 1.2;
+      font-weight: bold;
+    }
+
+    @media (max-width: 426px) {
+      .text-heading-xl {
+        font-size: 2.8rem;
+        letter-spacing: 0;
+      }
+
+      .text-heading-lg {
+        font-size: 2rem;
+        letter-spacing: 0;
+      }
+    }
+
+    .text-description-lg {
+      font-size: var(--description-lg);
+    }
+
+    .text-description-sm {
+      font-size: var(--description-sm);
+      line-height: 1.5;
+    }
+
+    .text-muted {
+      color: var(--text-muted);
+    }
+
+      .text-muted-light {
+    color: var(--gray-muted-light);
+  }
+  .text-muted-dark {
+    color: var(--gray-muted-dark);
+  }
+
+    .color-primary {
+      color: var(--color-primary);
+    }
+
+    .color-secondary {
+      color: var(--color-secondary);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .container-global {
+      max-width: 640px;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container-global {
+      max-width: 768px;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-global {
+      max-width: 1024px;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container-global {
+      max-width: 1280px;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+}
