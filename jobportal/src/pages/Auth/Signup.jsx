@@ -21,7 +21,7 @@ const Signup = () => {
     companyAddress: '',
   });
 
-  const [photo, setPhoto] = useState(null);
+  const [picture, setPhoto] = useState(null);
   const [CV, setCV] = useState(null);
   const [companyLogo, setCompanyLogo] = useState(null);
 
@@ -36,8 +36,8 @@ const Signup = () => {
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    if (name === 'photo') setPhoto(files[0]);
-    if (name === 'CV') setCV(files[0]);
+    //if (name === 'picture') setPhoto(files[0]);
+    //if (name === 'CV') setCV(files[0]);
     if (name === 'companyLogo') setCompanyLogo(files[0]);
   };
 
@@ -58,8 +58,8 @@ const Signup = () => {
       data.append('address', formData.address);
       data.append('country', formData.country);
       data.append('phoneNumber', formData.phoneNumber);
-      if (photo) data.append('photo', photo);
-      if (CV) data.append('CV', CV);
+      //if (picture) data.append('picture', picture);
+      //if (CV) data.append('CV', CV);
     } else {
       data.append('companyName', formData.companyName);
       data.append('companyAddress', formData.companyAddress);
@@ -140,22 +140,22 @@ const Signup = () => {
                 </div>
 
                 {/* Photo */}
-                <div>
+                {/*<div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo (Optional)</label>
                   <button type="button" onClick={() => photoInputRef.current.click()} className="flex-1 py-3 px-4 bg-white/50 border border-gray-200 rounded-xl flex items-center justify-center gap-2">
-                    <ImagePlus className="w-5 h-5" /> {photo ? photo.name : 'Upload Photo'}
+                    <ImagePlus className="w-5 h-5" /> {picture ? picture.name : 'Upload Photo'}
                   </button>
-                  <input type="file" name="photo" ref={photoInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                </div>
+                  <input type="file" name="picture" ref={photoInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                </div>*/}
 
-                {/* CV */}
+                {/* CV 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Upload CV (Optional)</label>
                   <button type="button" onClick={() => cvInputRef.current.click()} className="flex-1 py-3 px-4 bg-white/50 border border-gray-200 rounded-xl flex items-center justify-center gap-2">
                     <FileText className="w-5 h-5" /> {CV ? CV.name : 'Upload CV'}
                   </button>
                   <input type="file" name="CV" ref={cvInputRef} onChange={handleFileChange} accept=".pdf,.doc,.docx" className="hidden" />
-                </div>
+                </div>*/}
               </>
             )}
 
@@ -177,14 +177,14 @@ const Signup = () => {
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 </div>
 
-                {/* Company Logo */}
+                {/* Company Logo 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo (Optional)</label>
                   <button type="button" onClick={() => logoInputRef.current.click()} className="flex-1 py-3 px-4 bg-white/50 border border-gray-200 rounded-xl flex items-center justify-center gap-2">
                     <ImagePlus className="w-5 h-5" /> {companyLogo ? companyLogo.name : 'Upload Logo'}
                   </button>
                   <input type="file" name="companyLogo" ref={logoInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                </div>
+                </div> */}
               </>
             )}
 

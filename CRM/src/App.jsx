@@ -18,6 +18,7 @@ import AddJob from "./pages/AddJob";
 import EditJob from "./pages/EditJob";
 import ViewJob from "./pages/ViewJob";
 import CandidatePage from "./pages/CandidatePage";
+import AdminChat from "./pages/AdminChat";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -49,6 +50,7 @@ const App = () => {
         <Route path="editjob/:id" element={<EditJob />} />
         <Route path="viewjob" element={<ViewJob />} />
         <Route path="candidatepage" element={<CandidatePage />} />
+        <Route path="adminchat" element={<AdminChat />} />
       </Route>
 
       {/* Sales Dashboard */}

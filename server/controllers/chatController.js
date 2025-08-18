@@ -1,210 +1,114 @@
-const Chat = require('../models/ChatUser');
 const Message = require('../models/Message');
-const User = require('../models/User');
 const AdminUser = require('../models/AdminUser');
-const ChatAssignment = require('../models/ChatAssignment');
+const User = require('../models/User');
 
-// Enhanced chat controller with assignment logic
-exports.getOrCreateChat = async (req, res) => {
+// --- USER: Fetch messages with assigned admin ---
+exports.getUserMessages = async (req, res) => {
   try {
-    const { userId } = req.body;
-    const adminId = req.user._id;
-    
-    // For users requesting chat, find or create assignment
-    const requestingUser = req.user.role === 'user';
-    
-    if (requestingUser) {
-      // User is requesting chat - find or create assignment
-      let assignment = await ChatAssignment.findOne({ userId: req.user._id })
-        .populate('adminId', 'name email adminType');
-
-      if (!assignment) {
-        // Find available admin of correct type
-        const availableAdmin = await Admin.findOne({
-          adminType: req.user.userType,
-          isActive: true
-        });
-
-        if (!availableAdmin) {
-          return res.status(404).json({ error: `No available ${req.user.userType} admin found` });
-        }
-
-        // Create new assignment
-        assignment = await ChatAssignment.create({
-          userId: req.user._id,
-          adminId: availableAdmin._id,
-          userType: req.user.userType
-        });
-
-        await assignment.populate('adminId', 'name email adminType');
-      }
-
-      res.json({
-        success: true,
-        assignment,
-        assignedAdmin: assignment.adminId
-      });
-    } else {
-      // Admin accessing specific chat
-      const assignment = await ChatAssignment.findOne({ 
-        userId: userId,
-        adminId: adminId
-      }).populate('userId', 'name firstname lastname email userType companyName');
-
-      if (!assignment) {
-        return res.status(404).json({ error: 'Chat assignment not found' });
-      }
-
-      res.json({
-        success: true,
-        assignment
-      });
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Get chat messages with assignment validation
-exports.getMessages = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    // Validate assignment exists
-    let assignment;
-    if (req.user.role === 'admin') {
-      assignment = await ChatAssignment.findOne({
-        userId: userId,
-        adminId: req.user._id
-      });
-    } else {
-      assignment = await ChatAssignment.findOne({
-        userId: req.user._id
-      });
-    }
-
-    if (!assignment) {
-      return res.status(404).json({ error: 'Chat assignment not found' });
-    }
-
-    // Get messages between user and assigned admin
+    const adminId = req.params.adminId;
     const messages = await Message.find({
       $or: [
-        { senderId: assignment.userId.toString(), recipientId: assignment.adminId.toString() },
-        { senderId: assignment.adminId.toString(), recipientId: assignment.userId.toString() }
+        { senderId: req.user._id, recipientId: adminId },
+        { senderId: adminId, recipientId: req.user._id }
       ]
-    }).sort({ createdAt: 1 }).limit(100);
+    }).sort({ createdAt: 1 });
 
     res.json(messages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch messages' });
   }
 };
 
-// Get all users who have messages (for admin)
+// --- ADMIN: Fetch messages with a specific user ---
+exports.getAdminMessages = async (req, res) => {
+  console.log('Admin making request:', req.admin?._id, req.admin?.name);
+  const userId = req.params.userId;
+
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+
+  const messages = await Message.find({
+    $or: [
+      { senderId: req.admin._id, recipientId: userId },
+      { senderId: userId, recipientId: req.admin._id }
+    ]
+  }).sort({ createdAt: 1 });
+
+  res.json(messages);
+};
+
+
+// --- ADMIN: Get users who messaged ---
 exports.getUsersForAdmin = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    // Get assignments for this admin
-    const assignments = await ChatAssignment.find({ 
-      adminId: req.user._id,
-      status: 'active'
-    })
-    .populate('userId', 'name firstname lastname email userType companyName picture')
-    .sort({ lastMessageAt: -1 });
-
-    const users = assignments.map(assignment => ({
-      ...assignment.userId.toObject(),
-      assignmentId: assignment._id,
-      lastMessageAt: assignment.lastMessageAt,
-      messageCount: assignment.messageCount
-    }));
+    // Aggregate unique users who sent messages to this admin
+    const users = await Message.aggregate([
+      { $match: { recipientId: req.admin._id } },
+      { $group: { _id: "$senderId", lastMessageAt: { $max: "$createdAt" } } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      { $unwind: "$user" },
+      { $project: { _id: 1, name: "$user.name", email: "$user.email", lastMessageAt: 1 } },
+      { $sort: { lastMessageAt: -1 } }
+    ]);
 
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
 
-// Enhanced message sending with assignment update
-exports.sendMessage = async (req, res) => {
+// --- USER: Get assigned admin ---
+exports.getAssignedAdmin = async (req, res) => {
   try {
-    const { content, recipientId, senderType } = req.body;
-    const senderId = req.user._id;
+    const admin = await AdminUser.findOne();
+    if (!admin) return res.status(404).json({ message: 'No admin assigned' });
+    res.json({ assignedAdmin: admin });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch assigned admin' });
+  }
+};
 
-    // Create message
-    const message = await Message.create({
+// --- ADMIN: Send message to user ---
+exports.sendMessageToUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: 'Message content required' });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const admin = req.admin;
+
+    const newMessage = await Message.create({
       content,
-      senderId: senderId.toString(),
-      recipientId,
-      senderType: senderType || (req.user.role === 'admin' ? 'admin' : 'user')
+      senderId: admin._id,
+      senderType: admin.role,
+      senderName: admin.name,
+      senderModel: 'AdminUser',
+      recipientId: user._id,
+      recipientType: user.userType,
+      recipientName: user.name,
+      recipientModel: 'User',
     });
 
-    // Update assignment's last message time
-    if (req.user.role === 'admin') {
-      await ChatAssignment.findOneAndUpdate(
-        { adminId: senderId, userId: recipientId },
-        { 
-          lastMessageAt: new Date(),
-          $inc: { messageCount: 1 }
-        }
-      );
-    } else {
-      await ChatAssignment.findOneAndUpdate(
-        { userId: senderId },
-        { 
-          lastMessageAt: new Date(),
-          $inc: { messageCount: 1 }
-        }
-      );
-    }
+    // Emit via Socket.IO if user connected
+    const io = req.app.get('io');
+    if (io) io.to(user._id.toString()).emit('receiveMessage', newMessage);
 
-    res.json({
-      success: true,
-      message
-    });
+    res.status(201).json(newMessage);
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Get admin's chat assignments
-exports.getAdminChats = async (req, res) => {
-  try {
-    const assignments = await ChatAssignment.find({ 
-      adminId: req.user._id,
-      status: 'active'
-    })
-    .populate('userId', 'name firstname lastname email userType companyName picture')
-    .sort({ lastMessageAt: -1 });
-
-    res.json(assignments);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Get user's active chat assignment
-exports.getUserChat = async (req, res) => {
-  try {
-    const assignment = await ChatAssignment.findOne({
-      userId: req.user._id,
-      status: 'active'
-    }).populate('adminId', 'name email adminType');
-
-    if (!assignment) {
-      return res.status(404).json({ error: 'No active chat assignment found' });
-    }
-
-    res.json({
-      success: true,
-      assignment,
-      assignedAdmin: assignment.adminId
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Failed to send message' });
   }
 };

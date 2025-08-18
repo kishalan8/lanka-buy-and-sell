@@ -7,6 +7,7 @@ import JobDetail from './pages/JobDetail';
 import EditProfile from './pages/EditProfile';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import chat from './pages/Chat'
 
 // Candidate Dashboard
 import CandidateDashboardLayout from "./pages/CandidateDashboard/DashboardLayout";
@@ -27,6 +28,7 @@ import ChatAgent from "./pages/AgentDashboard/ChatAgent";
 import Analytics from "./pages/AgentDashboard/Analytics";
 
 import ScrollToTop from "./components/ScrollToTop";
+import Chat from './pages/Chat';
 
 function AppLayout() {
   const location = useLocation();
@@ -63,6 +65,7 @@ function AppLayout() {
           <Route path="inquiries" element={<CandidateInquiries />} />
           <Route path="documents" element={<CandidateDocuments />} />
           <Route path="saved-jobs" element={<SavedJobs />} />
+          <Route path="chats" element={<Chat />} />
         </Route>
 
         {/* Protected Agent Dashboard Routes */}

@@ -12,6 +12,7 @@ exports.protectAdmin = async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
+    console.log("Admin token:", token);
   }
 
   if (!token) {
@@ -27,7 +28,7 @@ exports.protectAdmin = async (req, res, next) => {
     if (!admin) {
       return res.status(401).json({ message: "Admin not found" });
     }
-
+    console.log("Admin found:", admin?.role);
     req.admin = admin; // attach admin to request
     next();
   } catch (error) {

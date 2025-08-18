@@ -22,6 +22,7 @@ const navItems = [
   { to: "/admin-dashboard/clients", label: "Clients", icon: Users },
   { to: "/admin-dashboard/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/admin-dashboard/reports", label: "Reports", icon: BarChart3 },
+  { to: "/admin-dashboard/adminchat", label: "Chat", icon: BarChart3 },
   {
     label: "Admin",
     icon: Shield,

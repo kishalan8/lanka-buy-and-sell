@@ -1,106 +1,147 @@
-// src/pages/Chat.jsx
-import React, { useEffect, useRef, useState } from "react";
-import socket from "../socket";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
+// Chat.jsx
+import React, { useEffect, useState, useRef } from 'react';
+import { io } from 'socket.io-client';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
-export default function Chat() {
-  const { user, admin } = useAuth();
+const Chat = () => {
+  const { user, loading: authLoading, setError } = useAuth();
   const [messages, setMessages] = useState([]);
-  const [input, setInput]       = useState("");
-  const scrollRef               = useRef();
+  const [input, setInput] = useState('');
+  const [socketLoading, setSocketLoading] = useState(true);
+  const [admin, setAdmin] = useState(null);
+  const socketRef = useRef();
+  const messagesEndRef = useRef(null);
 
-  const userId      = user?._id;
-  const isAdminView = !!admin;
-  const currentId   = isAdminView ? admin._id : userId;
-
+  // Auto-scroll when messages change
   useEffect(() => {
-    if (!currentId) return;
-
-    // 1) Join the room
-    console.log("🔔 Joining room:", currentId);
-    socket.emit("joinRoom", { userId: currentId, role: isAdminView ? "admin" : "user" });
-
-    // 2) Load history from DB
-    axios.get(`/api/chats/${currentId}`)
-      .then(res => {
-        console.log("📥 Chat history:", res.data);
-        setMessages(res.data);
-      })
-      .catch(err => {
-        console.error("❌ Failed to load history:", err);
-      });
-
-    // 3) Listen for incoming
-    const handler = msg => {
-      console.log("📨 Received message via socket:", msg);
-      if (msg.senderId === currentId || msg.recipientId === currentId) {
-        setMessages(prev => [...prev, msg]);
-      }
-    };
-    socket.on("receiveMessage", handler);
-
-    return () => {
-      socket.off("receiveMessage", handler);
-    };
-  }, [currentId, isAdminView]);
-
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = () => {
-    if (!input.trim() || !currentId) return;
+  // Fetch assigned admin and previous messages
+  useEffect(() => {
+    if (!user) return;
 
-    const msg = {
-      content:     input,
-      senderId:    currentId,
-      senderType:  isAdminView ? "admin" : "user",
-      recipientId: isAdminView ? userId : admin?._id || "admin"
+    const fetchChat = async () => {
+      try {
+        const token = localStorage.getItem('token');
+
+        // Step 1: get assigned admin
+        const adminRes = await axios.get('http://localhost:5000/api/chats/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const assignedAdmin = adminRes.data.assignedAdmin;
+        setAdmin(assignedAdmin);
+
+        // Step 2: get previous messages with that admin
+        const messagesRes = await axios.get(
+          `http://localhost:5000/api/chats/messages/${assignedAdmin._id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setMessages(messagesRes.data);
+      } catch (err) {
+        console.error('Failed to fetch chat:', err.response?.data || err.message);
+        setError('Failed to load chat');
+      }
     };
 
-    console.log("📤 Sending message:", msg);
-    socket.emit("sendMessage", msg);
+    fetchChat();
+  }, [user, setError]);
 
-    setMessages(prev => [...prev, { ...msg, createdAt: new Date() }]);
-    setInput("");
+  // Initialize Socket.IO
+  useEffect(() => {
+    if (!user || !admin) return;
+
+    const socket = io('http://localhost:5000', {
+      auth: { userId: user._id, role: 'user' },
+      transports: ['websocket', 'polling'],
+    });
+
+    socketRef.current = socket;
+
+    // Join user room
+    socket.emit('joinRoom', { userId: user._id, role: 'user' });
+
+    // Listen for incoming messages
+    socket.on('receiveMessage', (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on('messageSent', (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on('messageError', (err) => {
+      console.error('Socket messageError:', err);
+      setError(err.error || 'Message failed');
+    });
+
+    socket.on('connect', () => {
+      console.log('✅ Connected to socket:', socket.id);
+      setSocketLoading(false);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('❌ Socket connect error:', err);
+      setError('Socket connection failed');
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user, admin, setError]);
+
+  // Send a message
+  const sendMessage = () => {
+    if (!input.trim() || !socketRef.current || !admin) return;
+
+    socketRef.current.emit('sendMessage', {
+      content: input,
+      senderId: user._id,
+      senderType: 'user', // backend will assign admin
+    });
+
+    setInput('');
   };
 
-  if (!currentId) return <p>Please log in to access chat.</p>;
+  if (authLoading || socketLoading || !admin) return <div>Loading chat...</div>;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`mb-2 max-w-[75%] p-2 rounded ${
-              m.senderType === (isAdminView ? "admin" : "user")
-                ? "self-end bg-blue-100"
-                : "self-start bg-gray-200"
-            }`}
-          >
-            {m.content}
+    <div style={{ border: '1px solid #ccc', padding: '10px', maxWidth: '500px' }}>
+      <h2>Chat with {admin.name}</h2>
+      <div
+        style={{
+          maxHeight: '300px',
+          overflowY: 'scroll',
+          border: '1px solid #eee',
+          padding: '5px',
+          marginBottom: '10px',
+        }}
+      >
+        {messages.map((msg, idx) => (
+          <div key={idx} style={{ marginBottom: '5px' }}>
+            <strong>{msg.senderType === 'user' ? user.name : admin.name}:</strong> {msg.content}
           </div>
         ))}
-        <div ref={scrollRef} />
+        <div ref={messagesEndRef}></div>
       </div>
 
-      <div className="p-4 border-t flex">
+      <div style={{ display: 'flex', gap: '5px' }}>
         <input
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && sendMessage()}
-          placeholder="Type a message…"
-          className="flex-1 border rounded p-2 mr-2"
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type a message..."
+          style={{ flex: 1, padding: '5px' }}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
         />
-        <button
-          onClick={sendMessage}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
+        <button onClick={sendMessage} style={{ padding: '5px 10px' }}>
           Send
         </button>
       </div>
     </div>
   );
-}
+};
+
+export default Chat;

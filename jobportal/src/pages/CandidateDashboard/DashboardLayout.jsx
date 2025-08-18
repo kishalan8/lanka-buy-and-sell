@@ -19,7 +19,7 @@ const navItems = [
   { to: "profile", label: "Profile", icon: User },
   { to: "applications", label: "My Applications", icon: ClipboardList },
   { to: "saved-jobs", label: "Saved Jobs", icon: Heart },
-  { to: "inquiries", label: "Inquiries", icon: MessageSquare },
+  { to: "chats", label: "chat", icon: MessageSquare },
   { to: "documents", label: "Documents", icon: FileText },
 ];
 
