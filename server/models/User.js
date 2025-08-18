@@ -108,6 +108,7 @@ const userSchema = new mongoose.Schema({
       skills: [String],
       experience: String,
       qualifications: [String],
+      status: { type: String, enum: ["Pending", "Reviewed", "Approved", "Rejected"], default: "Pending" },
       addedAt: {
         type: Date,
         default: Date.now,

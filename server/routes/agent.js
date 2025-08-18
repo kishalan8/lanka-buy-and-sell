@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/AdminAuth');
+const { protect, authorizeAdmin, protectAdmin } = require('../middlewares/AdminAuth');
 const upload = require('../middlewares/upload');
 const User = require('../models/User');
 const Job = require('../models/Job');
+const {getAllManagedCandidates, updateCandidateStatus} = require('../controllers/usersController')
 
 // Middleware to allow only agents
 const agentOnly = (req, res, next) => {
@@ -378,5 +379,11 @@ router.get('/stats', protect, agentOnly, async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching agent statistics' });
   }
 });
+
+// Get all managed candidates from all agents
+router.get("/candidate", protectAdmin, authorizeAdmin("MainAdmin","AgentAdmin"), getAllManagedCandidates);
+
+// Update candidate status (need agentId and candidateId)
+router.put("/candidate/:agentId/:candidateId/status", protectAdmin, authorizeAdmin("MainAdmin","AgentAdmin"), updateCandidateStatus);
 
 module.exports = router;

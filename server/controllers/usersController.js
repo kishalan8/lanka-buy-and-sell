@@ -577,6 +577,51 @@ const getUserApplications = async (req, res) => {
   }
 };
 
+// Fetch all managed candidates for all agents (for admin)
+const getAllManagedCandidates = async (req, res) => {
+  try {
+    const agents = await User.find({ userType: "agent" }).select("name companyName managedCandidates");
+
+    const allCandidates = [];
+    agents.forEach(agent => {
+      agent.managedCandidates.forEach(candidate => {
+        allCandidates.push({
+          ...candidate.toObject(),
+          agentName: agent.name,
+          agentCompany: agent.companyName,
+          agentId: agent._id.toString(),
+        });
+      });
+    });
+
+    res.json({ success: true, data: allCandidates });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching managed candidates", error: error.message });
+  }
+};
+
+// Update candidate status
+const updateCandidateStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { agentId, candidateId } = req.params;
+
+    const agent = await User.findById(agentId);
+    if (!agent || agent.userType !== "agent") {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    const candidate = agent.managedCandidates.id(candidateId);
+    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+    candidate.status = status;
+    await agent.save();
+
+    res.json({ success: true, message: "Status updated successfully", candidate });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error updating status", error: error.message });
+  }
+};
 
 module.exports = {
   getUsers,
@@ -597,5 +642,7 @@ module.exports = {
   updateUserProfile,
   loginUser,
   signupUser,
-  getUserApplications
+  getUserApplications,
+  getAllManagedCandidates,
+  updateCandidateStatus
 }; 

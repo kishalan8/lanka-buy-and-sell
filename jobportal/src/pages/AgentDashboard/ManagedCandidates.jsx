@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Users, Plus, Search, Edit3, Trash2, Eye, FileText, Phone, Mail, User, X, Save, Upload
+  Users, Plus, Search, Edit3, Trash2, Eye, FileText, Phone, Mail, User, X, Save, Upload, Clock, CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +20,7 @@ const ManagedCandidates = () => {
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', skills: '', experience: '',
+    name: '', email: '', phone: '', skills: '', experience: '', status:'',
     address: '', qualifications: '', cv: null, passport: null, picture: null, drivingLicense: null
   });
 
@@ -90,7 +90,7 @@ const ManagedCandidates = () => {
 
   const handleEdit = candidate => {
     setFormData({
-      name: candidate.name, email: candidate.email, phone: candidate.phone,
+      name: candidate.name, email: candidate.email, phone: candidate.phone, status: candidate.status,
       skills: Array.isArray(candidate.skills) ? candidate.skills.join(', ') : candidate.skills,
       experience: candidate.experience, address: candidate.address,
       qualifications: Array.isArray(candidate.qualifications) ? candidate.qualifications.join(', ') : candidate.qualifications,
@@ -110,7 +110,7 @@ const ManagedCandidates = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '', email: '', phone: '', skills: '', experience: '',
+      name: '', email: '', phone: '', skills: '', experience: '', status:'',
       address: '', qualifications: '', cv: null, passport: null, picture: null, drivingLicense: null
     });
     setEditingCandidate(null);
@@ -121,6 +121,26 @@ const ManagedCandidates = () => {
   const formatDate = dateString => new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric'
   });
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "Pending": return <AlertCircle className="w-4 h-4" />;
+      case "Reviewed": return <Clock className="w-4 h-4" />;
+      case "Approved": return <CheckCircle className="w-4 h-4" />;
+      case "Rejected": return <XCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
+    }
+  };
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case "Pending": return "bg-yellow-400 text-white";
+      case "Reviewed": return "bg-blue-400 text-white";
+      case "Approved": return "bg-green-500 text-white";
+      case "Rejected": return "bg-red-500 text-white";
+      default: return "bg-gray-400 text-white";
+    }
+  };
 
   if (loading && candidates.length === 0) {
     return (
@@ -172,7 +192,14 @@ const ManagedCandidates = () => {
       ) : (
         <div className="grid gap-4">
           {filteredCandidates.map((candidate, index) => (
-            <motion.div key={candidate._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow">
+            <motion.div key={candidate._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className="relative bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow">
+              
+              {/* Status Badge */}
+              <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${getStatusStyle(candidate.status)}`}>
+                {getStatusIcon(candidate.status)}
+                <span>{candidate.status}</span>
+              </div>
+
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-3">
@@ -183,7 +210,6 @@ const ManagedCandidates = () => {
                         {candidate.phone && <div className="flex items-center gap-1"><Phone className="w-4 h-4" />{candidate.phone}</div>}
                       </div>
                     </div>
-                    <span className="text-sm text-gray-500">Added {formatDate(candidate.addedAt)}</span>
                   </div>
                   {candidate.skills && (
                     <div className="mb-3">

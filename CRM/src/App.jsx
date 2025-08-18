@@ -17,6 +17,7 @@ import ApplicationsPage from "./pages/ApplicationsPage";
 import AddJob from "./pages/AddJob";
 import EditJob from "./pages/EditJob";
 import ViewJob from "./pages/ViewJob";
+import CandidatePage from "./pages/CandidatePage";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -47,6 +48,7 @@ const App = () => {
         <Route path="addjob" element={<AddJob />} />
         <Route path="editjob/:id" element={<EditJob />} />
         <Route path="viewjob" element={<ViewJob />} />
+        <Route path="candidatepage" element={<CandidatePage />} />
       </Route>
 
       {/* Sales Dashboard */}
@@ -79,6 +81,7 @@ const App = () => {
       >
         <Route path="mytasks" element={<MyTasksPage />} />
         <Route path="client" element={<ClientsPage />} />
+        <Route path="candidatepage" element={<CandidatePage />} />
       </Route>
 
       {/* Unauthorized & 404 */}

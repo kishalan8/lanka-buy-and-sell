@@ -22,6 +22,7 @@ const navItems = [
   { to: "/agent-dashboard/client", label: "Agents", icon: Users },
   { to: "/agent-dashboard/mytasks", label: "Tasks", icon: CheckSquare },
   { to: "/agent-dashboard/reports", label: "Reports", icon: BarChart3 },
+  { to: "/agent-dashboard/candidatepage", label: "Managed Candidates", icon: BarChart3 },
 ];
 
 
