@@ -1,120 +1,91 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, User, Briefcase, Mail, Phone, Calendar, MapPin, Clock, Edit2, Plus, MessageSquare, UserPlus, CheckCircle, FileText, Send, PhoneCall } from 'lucide-react';
+import {
+  ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, User,
+  FileText, MessageSquare, Clock, Download, Building,
+  ChevronDown, ChevronUp, Edit, Save, X, Send
+} from 'lucide-react';
 import { useNavigate, useParams } from "react-router-dom";
 
-const LeadsDetailsPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [notes, setNotes] = useState([
-    {
-      id: 1,
-      content: 'Initial contact made via email. Interested in exploring visa options for software engineering roles.',
-      author: 'Sarah Johnson',
-      date: '2023-05-15',
-      time: '10:30 AM'
-    },
-    {
-      id: 2,
-      content: 'Follow-up call scheduled for next week to discuss specific requirements and documentation needed.',
-      author: 'Sarah Johnson',
-      date: '2023-05-16',
-      time: '2:15 PM'
-    }
-  ]);
-  const [newNote, setNewNote] = useState('');
-
-  const lead = {
+const mockCandidates = [
+  {
     id: 1,
     name: 'John Smith',
-    type: 'Customer',
-    profession: 'Software Engineer',
-    status: 'Initial Contact',
-    assigned: 'Sarah Johnson',
-    contact: 'john.smith@email.com',
+    type: 'B2C',
+    email: 'john.smith@email.com',
     phone: '+1 (555) 123-4567',
+    location: 'Toronto, Canada',
+    profession: 'Software Engineer',
+    status: 'New Application',
+    jobInterest: 'IT Roles',
     lastContact: '2023-05-15',
-    priority: 'High',
-    location: 'San Francisco, CA',
-    source: 'Website Inquiry',
-    created: '2023-05-01'
-  };
+    resume: 'Submitted',
+    visaStatus: 'Approved',
+    agent: null,
+     dob: '1990-05-15',
+    gender: 'Male',
+    ageRange: '30-35',
+    qualification: 'Master\'s Degree',
+    experience: '8 years',
+    categories: ['IT & Networking', 'Engineering'],
+    languages: ['English', 'French'],
+    aboutMe: 'Experienced software engineer with 8 years of expertise in developing scalable web applications. Passionate about clean code architecture and mentoring junior developers. Seeking opportunities to work on challenging projects in a collaborative environment.',
+    socialNetworks: [
+      { platform: 'LinkedIn', url: 'https://linkedin.com/in/johnsmith' },
+      { platform: 'GitHub', url: 'https://github.com/johnsmith' }
+    ]
+  },
+];
 
-  const handleBack = () => {
-    navigate('/dashboard/leads');
-  };
+const LeadsDetailsPage = () => {
+  const [activeTab, setActiveTab] = useState('personal-info');
+  const [candidate, setCandidate] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleEdit = () => {
-    console.log('Edit lead');
-  };
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-  const handleConvertToClient = () => {
-    console.log("Converting lead to client:", lead);
-  };
-
-  const handleAddNote = () => {
-    if (newNote.trim() === '') return;
-
-    const note = {
-      id: notes.length + 1,
-      content: newNote,
-      author: 'You',
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  useEffect(() => {
+    const fetchCandidate = async () => {
+      try {
+        setLoading(true);
+        // 👇 call your backend
+        const { data } = await axios.get(`/api/leads/${id}`);
+        // adjust according to API response
+        setCandidate(data?.lead || data); 
+      } catch (error) {
+        console.error('Error fetching candidate:', error);
+        setCandidate(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setNotes([note, ...notes]);
-    setNewNote('');
-  };
+    fetchCandidate();
+  }, [id]);
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'High': return 'bg-red-100 text-red-700 border-red-200';
-      case 'Medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'Low': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Initial Contact': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Assessment': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Documentation': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Visa Processing': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Offer Received': return 'bg-teal-100 text-teal-800 border-teal-200';
-      case 'Completed': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  if (!candidate) {
+    return (
+      <div className="p-6 text-center">
+        <p>No candidate found with ID: {id}</p>
+        <button
+          onClick={() => navigate('/sales-dashboard/candidates')}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
+        >
+          Back to Candidates
+        </button>
+      </div>
+    );
+  }
 
-  const timelineEvents = [
-    {
-      id: 1,
-      type: 'creation',
-      date: lead.created,
-      title: 'Lead Created',
-      description: 'Lead was added to the system via website inquiry',
-      icon: <UserPlus size={16} className="text-blue-500" />
-    },
-    {
-      id: 2,
-      type: 'contact',
-      date: '2023-05-05',
-      title: 'Initial Contact',
-      description: 'Sent introductory email with service information and consultation options',
-      icon: <Mail size={16} className="text-green-500" />
-    },
-    {
-      id: 3,
-      type: 'call',
-      date: lead.lastContact,
-      title: 'Follow-up Call',
-      description: 'Discussed requirements, visa options, and outlined next steps for documentation',
-      icon: <Phone size={16} className="text-purple-500" />
-    }
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -139,395 +110,510 @@ const LeadsDetailsPage = () => {
     }
   };
 
+  const tabVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'New Application': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Assessment': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Documentation': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Visa Processing': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Offer Received': return 'bg-teal-100 text-teal-800 border-teal-200';
+      case 'Completed': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getVisaStatusColor = (status) => {
+    switch (status) {
+      case 'Approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Processing': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Not Started': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Completed': return 'bg-teal-100 text-teal-800 border-teal-200';
+      case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  }
+
   return (
-    <div
-      className="md:p-6"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6 py-5 sm:p-6"
     >
+      {/* Header */}
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+        <motion.button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group cursor-pointer"
+          whileHover={{ x: -5 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <ArrowLeft size={20} className="group-hover:scale-110 transition-transform" />
+          <span className="font-medium">Back</span>
+        </motion.button>
+      </motion.div>
+
+      {/* Candidate Summary */}
       <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="mx-auto"
+        variants={itemVariants}
+        className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 mb-8 overflow-hidden relative"
       >
-        {/* Header with back button */}
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4"
-        >
-          <motion.button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group cursor-pointer"
-            whileHover={{ x: -5 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <ChevronLeft size={20} className="group-hover:scale-110 transition-transform" />
-            <span className="font-medium">Back to Leads</span>
-          </motion.button>
+        {/* Background decoration */}
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-5 overflow-hidden blur-xl">
+          <div
+            className="w-full h-full rounded-full"
+            style={{
+              background: 'linear-gradient(90deg, #1B3890, #0F79C5)'
+            }}
+          ></div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-max mx-auto sm:mx-0 sm:w-auto">
-            <motion.button
-              onClick={handleConvertToClient}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 md:flex-none group relative overflow-hidden flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold text-description-sm shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-              style={{
-                background: 'linear-gradient(90deg, #10b981, #059669)'
-              }}
-            >
-              <UserPlus className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
-              <span>Convert to Client</span>
-            </motion.button>
+        <div className="relative z-10">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 flex-1">
+              <motion.div
+                className={`p-4 rounded-2xl ${candidate.type === 'B2C' ? 'bg-blue-100' : 'bg-indigo-100'} shadow-lg`}
+                whileHover={{ rotate: 360, scale: 1.1 }}
+                transition={{ duration: 0.6 }}
+              >
+                {candidate.type === 'B2C' ? (
+                  <User className={`h-10 w-10 ${candidate.type === 'B2C' ? 'text-[var(--color-secondary)]' : 'text-[var(--color-primary)]'}`} />
+                ) : (
+                  <Briefcase className="h-12 w-12 text-[var(--color-secondary)]" />
+                )}
+              </motion.div>
 
-            <motion.button
-              onClick={handleEdit}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 md:flex-none group relative overflow-hidden flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-semibold text-description-sm shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-primary cursor-pointer"
-            >
-              <Edit2 className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
-              <span>Edit Lead</span>
-            </motion.button>
-          </div>
-        </motion.div>
-
-        {/* Lead Summary Card */}
-        <motion.div
-          variants={itemVariants}
-          className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 mb-8 overflow-hidden relative"
-        >
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 opacity-5 overflow-hidden blur-xl">
-            <div
-              className="w-full h-full rounded-full"
-              style={{
-                background: 'linear-gradient(90deg, #1B3890, #0F79C5)'
-              }}
-            ></div>
-          </div>
-
-          <div className="relative z-10">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 flex-1">
-                <motion.div
-                  className={`p-4 rounded-2xl ${lead.type === 'Customer' ? 'bg-blue-100' : 'bg-indigo-100'} shadow-lg`}
-                  whileHover={{ rotate: 360, scale: 1.1 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  {lead.type === 'Customer' ? (
-                    <User className={`h-10 w-10 ${lead.type === 'Customer' ? 'text-blue-600' : 'text-indigo-600'}`} />
-                  ) : (
-                    <Briefcase className="h-12 w-12 text-indigo-600" />
-                  )}
-                </motion.div>
-
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start sm:justify-between gap-4 mb-4">
-                    <div>
-                      <motion.h1
-                        className="text-heading-lg text-gray-900 mb-2"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                      >
-                        {lead.name}
-                      </motion.h1>
-                      <motion.p
-                        className="text-lg text-muted-dark font-medium"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.4 }}
-                      >
-                        {lead.profession}
-                      </motion.p>
-                    </div>
-
-                    <div className="flex justify-center flex-wrap gap-3">
-                      <motion.span
-                        className={`px-4 py-2 text-sm font-semibold rounded-full border shadow-sm ${getPriorityColor(lead.priority)}`}
-                        whileHover={{ scale: 1.05 }}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5 }}
-                      >
-                        {lead.priority} Priority
-                      </motion.span>
-                      <motion.span
-                        className={`px-4 py-2 text-sm font-semibold rounded-full border shadow-sm ${getStatusColor(lead.status)}`}
-                        whileHover={{ scale: 1.05 }}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.6 }}
-                      >
-                        {lead.status}
-                      </motion.span>
-                    </div>
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start sm:justify-between gap-4 mb-4">
+                  <div>
+                    <motion.h1
+                      className="text-heading-lg text-gray-900 mb-2"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      {candidate.name}
+                    </motion.h1>
+                    <motion.p
+                      className="text-lg text-muted-dark font-medium"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      {candidate.profession}
+                    </motion.p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    {[
-                      { icon: Mail, label: 'Email', value: lead.contact, color: 'text-blue-500' },
-                      { icon: Phone, label: 'Phone', value: lead.phone, color: 'text-green-500' },
-                      { icon: MapPin, label: 'Location', value: lead.location, color: 'text-red-500' },
-                      { icon: FileText, label: 'Source', value: lead.source, color: 'text-purple-500' }
-                    ].map((item, index) => (
-                      <motion.div
-                        key={item.label}
-                        className="flex items-center gap-2 p-3 bg-white/60 rounded-xl border border-white/30 backdrop-blur-sm hover:bg-white/80 transition-all duration-300"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.7 + index * 0.1 }}
-                        whileHover={{ scale: 1.02, y: -2 }}
-                      >
-                        <div className={`p-1 rounded-lg bg-gray-100 ${item.color}`}>
-                          <item.icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-dark font-medium">{item.label}</p>
-                          <p className="text-gray-700 font-semibold truncate text-sm">{item.value}</p>
-                        </div>
-                      </motion.div>
-                    ))}
+                  <div className="flex justify-center flex-wrap gap-3">
+                    <motion.span
+                      className={`px-4 py-2 text-sm font-semibold rounded-full border shadow-sm ${getStatusColor(candidate.status)}`}
+                      whileHover={{ scale: 1.05 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      {candidate.status}
+                    </motion.span>
+                    <motion.span
+                      className={`px-4 py-2 text-sm font-semibold rounded-full border shadow-sm ${getVisaStatusColor(candidate.visaStatus)}`}
+                      whileHover={{ scale: 1.05 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.6 }}
+                    >
+                      {candidate.visaStatus}
+                    </motion.span>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                  {[
+                    { icon: Mail, label: 'Email', value: candidate.email, color: 'text-blue-500' },
+                    { icon: Phone, label: 'Phone', value: candidate.phone, color: 'text-green-500' },
+                    { icon: MapPin, label: 'Location', value: candidate.location, color: 'text-red-500' },
+                    { icon: FileText, label: 'Last Contact', value: candidate.lastContact, color: 'text-purple-500' }
+                  ].map((item, index) => (
+                    <motion.div
+                      key={item.label}
+                      className="flex items-center gap-2 p-3 bg-white/60 rounded-xl border border-white/30 backdrop-blur-sm hover:bg-white/80 transition-all duration-300"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.7 + index * 0.1 }}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                    >
+                      <div className={`p-1 rounded-lg bg-gray-100 ${item.color}`}>
+                        <item.icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-dark font-medium">{item.label}</p>
+                        <p className="text-gray-700 font-semibold truncate text-sm">{item.value}</p>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-        </motion.div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Left Column - Timeline & Notes */}
-          <div className="xl:col-span-2 space-y-8">
-            {/* Timeline Section */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-4 sm:p-6 overflow-hidden relative"
-            >
-              <motion.h2
-                className="text-lg sm:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.8 }}
-              >
-                <div className="p-2 rounded-xl bg-blue-100">
-                  <Calendar className="text-[var(--color-secondary)] h-6 w-6" />
-                </div>
-                <span>Lead Timeline</span>
-              </motion.h2>
-
-              <div className="space-y-2">
-                {timelineEvents.map((event, index) => (
-                  <motion.div
-                    key={event.id}
-                    className="flex sm:gap-6 group"
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.9 + index * 0.1 }}
-                  >
-                    <div className="flex flex-col items-center">
-                      <motion.div
-                        className="p-3 rounded-full bg-white shadow-lg border-2 border-blue-100 group-hover:border-blue-300 transition-all duration-100"
-                        whileHover={{ scale: 1.2 }}
-                      >
-                        {event.icon}
-                      </motion.div>
-                      {index !== timelineEvents.length - 1 && (
-                        <div className="w-0.5 h-12 bg-gradient-to-b from-gray-300 to-transparent my-2"></div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 sm:pb-6">
-                      <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-white/30 group-hover:bg-white/80 group-hover:shadow-md transition-all duration-300">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-bold text-gray-900 text-md">{event.title}</h3>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">{event.date}</span>
-                        </div>
-                        <p className="text-gray-600 leading-relaxed text-sm">{event.description}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Notes Section */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-4 sm:p-6 overflow-hidden relative"
-            >
-              <motion.h2
-                className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.2 }}
-              >
-                <div className="p-2 rounded-xl bg-purple-100">
-                  <MessageSquare className="text-purple-600 h-6 w-6" />
-                </div>
-                <span className="text-lg sm:text-2xl">Notes</span>
-              </motion.h2>
-
-              {/* Add Note Form */}
-              <motion.div
-                className="mb-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.3 }}
-              >
-                <textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Add a note about this lead..."
-                  className="w-full p-4 border border-gray-300 rounded-xl focus:ring-1 focus:ring-[var(--color-secondary)] focus:border-[var(--color-secondary)] outline-none bg-white/80 backdrop-blur-sm transition-all duration-300 font-medium resize-none"
-                  rows="4"
-                />
-                <div className="flex justify-end mt-2">
-                  <motion.button
-                    onClick={handleAddNote}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="group relative overflow-hidden flex items-center gap-2 px-6 py-3 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-primary"
-                  >
-                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                    Add Note
-                  </motion.button>
-                </div>
-              </motion.div>
-
-              {/* Notes List */}
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {notes.map((note, index) => (
-                    <motion.div
-                      key={note.id}
-                      className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300 relative overflow-hidden"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: index * 0.1 }}
-                      layout
-                    >
-                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-primary"></div>
-
-                      <div className="flex flex-col sm:flex-row items-center sm:justify-between sm:items-start mb-1">
-                        <div className="flex items-center gap-3">
-                          <div className="hidden w-8 h-8 bg-gradient-primary rounded-full sm:flex items-center justify-center text-white font-bold text-sm">
-                            {note.author.charAt(0)}
-                          </div>
-                          <p className="font-bold text-gray-900">{note.author}</p>
-                        </div>
-                        <div className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full font-medium">
-                          {note.date} • {note.time}
-                        </div>
-                      </div>
-                      <p className="text-gray-700 leading-relaxed pl-11">{note.content}</p>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {notes.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <MessageSquare size={32} className="text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 font-medium">No notes yet</p>
-                    <p className="text-gray-400 text-sm">Add your first note to start tracking communications</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Column - Quick Actions and Details */}
-          <div className="space-y-8">
-            {/* Quick Actions */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-6 overflow-hidden relative"
-            >
-              <motion.h2
-                className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.4 }}
-              >
-                <div className="p-2 rounded-xl bg-green-100">
-                  <CheckCircle className="text-green-600 h-5 w-5" />
-                </div>
-                <span>Quick Actions</span>
-              </motion.h2>
-
-              <div className="space-y-4">
-                {[
-                  { icon: PhoneCall, label: 'Schedule Call', color: 'from-blue-600 to-cyan-600', hoverColor: 'hover:from-blue-600 hover:to-cyan-600' },
-                  { icon: Send, label: 'Send Email', color: 'from-green-600 to-emerald-600', hoverColor: 'hover:from-green-600 hover:to-emerald-600' },
-                  { icon: FileText, label: 'Generate Report', color: 'from-purple-600 to-indigo-600', hoverColor: 'hover:from-purple-600 hover:to-indigo-600' }
-                ].map((action, index) => (
-                  <motion.button
-                    key={action.label}
-                    whileHover={{ scale: 1.03, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full group relative overflow-hidden flex items-center gap-4 px-6 py-4 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r ${action.color} ${action.hoverColor}`}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1.5 + index * 0.1 }}
-                  >
-                    <action.icon size={20} className="group-hover:scale-110 transition-transform duration-300" />
-                    <span>{action.label}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Lead Details */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-6 overflow-hidden relative"
-            >
-              <motion.h2
-                className="text-lg sm:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.8 }}
-              >
-                <div className="p-2 rounded-xl bg-gray-100">
-                  <FileText className="text-gray-600 h-5 w-5" />
-                </div>
-                <span>Lead Information</span>
-              </motion.h2>
-
-              <div className="space-y-4">
-                {[
-                  { label: 'Assigned To', value: lead.assigned, icon: User },
-                  { label: 'Created On', value: lead.created, icon: Calendar },
-                  { label: 'Last Contact', value: lead.lastContact, icon: Clock },
-                  { label: 'Lead Type', value: lead.type, icon: FileText }
-                ].map((detail, index) => (
-                  <motion.div
-                    key={detail.label}
-                    className="p-4 bg-gradient-to-r from-white/60 to-gray-50/60 rounded-xl border border-white/30 backdrop-blur-sm hover:bg-white/80 transition-all duration-300"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1.9 + index * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-white shadow-sm">
-                        <detail.icon className="w-5 h-5 text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-dark font-medium">{detail.label}</p>
-                        <p className="text-gray-700 font-bold">{detail.value}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
         </div>
       </motion.div>
+
+{/* tabs*/}
+<motion.div variants={itemVariants} className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden relative">
+  {/* Background decoration */}
+  <div className="absolute top-0 right-0 w-48 h-48 opacity-5 overflow-hidden blur-xl">
+    <div
+      className="w-full h-full rounded-full"
+      style={{
+        background: 'linear-gradient(90deg, #1B3890, #0F79C5)'
+      }}
+    ></div>
+  </div>
+
+  <div className="relative z-10">
+    {/* Tab Navigation */}
+    <div className="flex border-b border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100/50 px-2">
+      {['Personal Info', 'Resume/CV', 'Application History'].map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab.toLowerCase().replace(' ', '-'))}
+          className={`relative px-3 sm:px-6 py-4 text-xs sm:text-sm font-medium transition-all duration-300 group ${activeTab === tab.toLowerCase().replace(' ', '-')
+              ? 'text-[var(--color-primary)]'
+              : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          {tab}
+          <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--color-primary)] transition-all duration-300 ${activeTab === tab.toLowerCase().replace(' ', '-') ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
+        </button>
+      ))}
     </div>
+
+    {/* Tab Content */}
+    <div className=" p-4 sm:p-8">
+      <AnimatePresence>
+        {activeTab === 'personal-info' && (
+          <motion.div
+            variants={tabVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="space-y-4"
+          >
+            {/* Header */}
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Personal Information</h3>
+              <p className="text-sm text-gray-500 mt-1">Complete candidate profile details</p>
+            </div>
+                          {/* About Me Card - Full Width */}
+              <div className="lg:col-span-2 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <User size={18} className="text-[var(--color-primary)]" />
+                  About Me
+                </h4>
+                <div className="p-4 bg-gray-50/80 rounded-lg border border-gray-100">
+                  <p className="text-gray-700">{candidate.aboutMe || 'No information provided'}</p>
+                </div>
+              </div>
+
+            {/* Personal Information Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Basic Information Card */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <User size={18} className="text-[var(--color-primary)]" />
+                  Basic Information
+                </h4>
+                <div className="space-y-4">
+                  {[
+                    { label: 'Full Name', value: candidate.name, icon: User },
+                    { label: 'Email', value: candidate.email, icon: Mail },
+                    { label: 'Phone', value: candidate.phone, icon: Phone },
+                    { label: 'Date of Birth', value: candidate.dob, icon: Calendar },
+                    { label: 'Gender', value: candidate.gender, icon: User },
+                    { label: 'Age Range', value: candidate.ageRange, icon: User },
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50/50 transition-colors">
+                      <div className="p-2 bg-gray-100 rounded-lg text-[var(--color-primary)]">
+                        <item.icon size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">{item.label}</p>
+                        <p className="text-sm font-medium text-gray-800">{item.value || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Professional Information Card */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Briefcase size={18} className="text-[var(--color-primary)]" />
+                  Professional Information
+                </h4>
+                <div className="space-y-4">
+                  {[
+                    { label: 'Location', value: candidate.location, icon: MapPin },
+                    { label: 'Profession', value: candidate.profession, icon: Briefcase },
+                    { label: 'Qualification', value: candidate.qualification, icon: FileText },
+                    { label: 'Experience', value: candidate.experience, icon: Clock },
+                    { label: 'Job Interest', value: candidate.jobInterest, icon: Briefcase },
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50/50 transition-colors">
+                      <div className="p-2 bg-gray-100 rounded-lg text-[var(--color-primary)]">
+                        <item.icon size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">{item.label}</p>
+                        <p className="text-sm font-medium text-gray-800">{item.value || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Categories Card */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <FileText size={18} className="text-[var(--color-primary)]" />
+                  Categories
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {candidate.categories?.map(category => (
+                    <span key={category} className="px-3 py-1.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full border border-blue-200">
+                      {category}
+                    </span>
+                  ))}
+                  {(!candidate.categories || candidate.categories.length === 0) && (
+                    <p className="text-gray-500 italic">No categories specified</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Languages Card */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <MessageSquare size={18} className="text-[var(--color-primary)]" />
+                  Languages
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {candidate.languages?.map(language => (
+                    <span key={language} className="px-3 py-1.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full border border-green-200">
+                      {language}
+                    </span>
+                  ))}
+                  {(!candidate.languages || candidate.languages.length === 0) && (
+                    <p className="text-gray-500 italic">No languages specified</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Social Networks Card - Full Width */}
+              <div className="lg:col-span-2 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <MessageSquare size={18} className="text-[var(--color-primary)]" />
+                  Social Networks
+                </h4>
+                <div className="flex flex-wrap gap-3">
+                  {candidate.socialNetworks?.map((network, index) => (
+                    <a
+                      key={index}
+                      href={network.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors border border-blue-200"
+                    >
+                      <span className="font-medium">{network.platform}</span>
+                    </a>
+                  ))}
+                  {(!candidate.socialNetworks || candidate.socialNetworks.length === 0) && (
+                    <p className="text-gray-500 italic">No social networks provided</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {candidate.agent && (
+              <div className="bg-blue-50/80 p-6 rounded-xl border border-blue-100">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Building size={18} className="text-[var(--color-primary)]" />
+                  Agent Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Agency</p>
+                    <p className="font-medium">{candidate.agent.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Contact Person</p>
+                    <p className="font-medium">{candidate.agent.contactPerson}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-medium">{candidate.agent.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-medium">{candidate.agent.phone}</p>
+                  </div>
+                </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'resume/cv' && (
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="space-y-6"
+            >
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Resume & Documents</h3>
+                <p className="text-sm text-gray-500 mt-1">Candidate's documents and files</p>
+              </div>
+
+              <div className="bg-blue-50/80 p-3 sm:p-6 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <FileText className="h-8 w-8 text-[var(--color-secondary)]" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">John_Smith_Resume.pdf</h4>
+                    <p className="text-sm text-gray-600">Uploaded on May 15, 2023</p>
+                  </div>
+                  <button className="ml-auto hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-primary text-white rounded-lg cursor-pointer transition-colors">
+                    <Download size={16} />
+                    Download
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-4">Other Documents</h4>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-gray-500" />
+                      <div>
+                        <p className="font-medium">Cover_Letter.pdf</p>
+                        <p className="text-sm text-gray-500">Uploaded on May 16, 2023</p>
+                      </div>
+                    </div>
+                    <button className="text-[var(--color-primary)] hover:text-[var(--color-primary-dark)]">
+                      <Download size={18} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-gray-500" />
+                      <div>
+                        <p className="font-medium">Certifications.pdf</p>
+                        <p className="text-sm text-gray-500">Uploaded on May 18, 2023</p>
+                      </div>
+                    </div>
+                    <button className="text-[var(--color-primary)] hover:text-[var(--color-primary-dark)]">
+                      <Download size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <button className="px-4 py-2 bg-white border border-[var(--color-primary)] text-[var(--color-primary)] cursor-pointer rounded-lg hover:bg-blue-100 transition-colors">
+                  Upload New Document
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'application-history' && (
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="space-y-6"
+            >
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Application History</h3>
+                <p className="text-sm text-gray-500 mt-1">Candidate's application progress timeline</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Initial Application</p>
+                      <p className="text-sm text-gray-500">May 15, 2023</p>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full border border-blue-200">
+                      Completed
+                    </span>
+                  </div>
+                  <p className="mt-2 text-gray-600">Candidate submitted initial application form</p>
+                </div>
+
+                <div className="p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Skills Assessment</p>
+                      <p className="text-sm text-gray-500">May 18, 2023</p>
+                    </div>
+                    <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-full border border-purple-200">
+                      Completed
+                    </span>
+                  </div>
+                  <p className="mt-2 text-gray-600">Candidate completed technical skills assessment with score of 87%</p>
+                </div>
+
+                <div className="p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Document Verification</p>
+                      <p className="text-sm text-gray-500">May 20, 2023</p>
+                    </div>
+                    <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full border border-green-200">
+                      In Progress
+                    </span>
+                  </div>
+                  <p className="mt-2 text-gray-600">Waiting for verification of education certificates</p>
+                </div>
+
+                <div className="p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Visa Processing</p>
+                      <p className="text-sm text-gray-500">Not started</p>
+                    </div>
+                    <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full border border-gray-200">
+                      Pending
+                    </span>
+                  </div>
+                  <p className="mt-2 text-gray-600">Will begin after document verification is complete</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+
+</motion.div>
+    </motion.div>
   );
 };
 

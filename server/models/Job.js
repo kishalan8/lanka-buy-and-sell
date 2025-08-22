@@ -30,6 +30,8 @@ const jobSchema = new mongoose.Schema({
   requirements: [String],
   skills: [String],
   salary: Number,
+  candidateCost: Number,
+  agentCost: Number,
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin',

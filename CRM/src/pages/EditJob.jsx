@@ -16,6 +16,8 @@ const EditJob = () => {
     requirements: '',
     skills: '',
     salary: '',
+    candidateCost: '',
+    agentCost: '',
     benefits: '',
     expiringAt: '',
     ageLimitMin: '',
@@ -54,6 +56,8 @@ const EditJob = () => {
           requirements: Array.isArray(data.requirements) ? data.requirements.join('\n') : '',
           skills: Array.isArray(data.skills) ? data.skills.join(', ') : '',
           salary: data.salary || '',
+          candidateCost: data.candidateCost || '',
+          agentCost: data.agentCost || '',
           benefits: Array.isArray(data.benefits) ? data.benefits.join('\n') : '',
           expiringAt: data.expiringAt ? data.expiringAt.split('T')[0] : '',
           ageLimitMin: data.ageLimit?.min ?? '',
@@ -167,6 +171,8 @@ const EditJob = () => {
           </div>
 
           <InputField label="Salary" name="salary" value={jobForm.salary} onChange={handleChange} />
+          <InputField label="CandidateCost" name="candidateCost" value={jobForm.candidateCost} onChange={handleChange} />
+          <InputField label="AgentCost" name="agentCost" value={jobForm.agentCost} onChange={handleChange} />
           <InputField label="Skills (comma separated)" name="skills" value={jobForm.skills} onChange={handleChange} placeholder="JavaScript, React, Node.js" />
 
           <TextArea label="Description" name="description" value={jobForm.description} onChange={handleChange} rows={5} />

@@ -23,6 +23,7 @@ const JobListingPage = () => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [applied, setApplied] = useState(false);
   const navigate = useNavigate();
 
   const fetchJobs = async (filters = {}) => {

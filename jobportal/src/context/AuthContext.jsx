@@ -9,6 +9,7 @@ axios.defaults.baseURL = 'http://localhost:5000';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userType, setUserType] = useState(null);
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,6 +52,7 @@ export const AuthProvider = ({ children }) => {
           if (data.success && data.user) {
             {
               setUser(data.user);
+              setUserType(data.user.userType);
             }
           }
         }
@@ -76,6 +78,7 @@ export const AuthProvider = ({ children }) => {
       if (data.success) {
         localStorage.setItem('token', data.token);
         setUser(data.user);
+        setUserType(data.user.userType);
         
         // Navigate based on user type
         if (data.user.userType === 'agent') {
@@ -112,6 +115,7 @@ export const AuthProvider = ({ children }) => {
       if (data.success) {
         localStorage.setItem('token', data.token);
         setUser(data.user);
+        setUserType(data.user.userType);
         
         // Navigate based on user type
         if (data.user.userType === 'agent') {
@@ -265,6 +269,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     error,
+    userType,
     
     // Authentication methods
     login,

@@ -8,7 +8,7 @@ import { Briefcase, MapPin, Coins, ArrowLeft, CheckCircle, Send, Clock, Users, S
 const JobDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userType } = useAuth();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,7 +38,7 @@ const JobDetail = () => {
     };
 
     fetchJob();
-  }, [id, user]);
+  }, [id, user, userType]);
 
   const handleApply = async () => {
     try {
@@ -225,6 +225,42 @@ const handleInquirySubmit = async (e) => {
                   </div>
                 </div>
               </motion.div>
+
+              {/* Candidate Cost */}
+  {(userType === "candidate" || !user) && job.candidateCost && (
+    <motion.div
+      className="group relative bg-gradient-to-br from-yellow-50 to-amber-50 p-3 rounded-2xl border border-yellow-100 hover:border-yellow-200 transition-all duration-200"
+      whileHover={{ scale: 1.02, y: -2 }}
+    >
+      <div className="flex items-center gap-4">
+        <div className="p-2 bg-gradient-to-r from-yellow-500 to-amber-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+          <Coins className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <p className="text-sm text-gray-500 mb-1">Candidate Cost</p>
+          <p className="font-semibold text-yellow-700 text-md">{job.candidateCost}</p>
+        </div>
+      </div>
+    </motion.div>
+  )}
+
+  {/* Agent Cost */}
+  {userType === "agent" && job.agentCost && (
+    <motion.div
+      className="group relative bg-gradient-to-br from-pink-50 to-rose-50 p-3 rounded-2xl border border-pink-100 hover:border-pink-200 transition-all duration-200"
+      whileHover={{ scale: 1.02, y: -2 }}
+    >
+      <div className="flex items-center gap-4">
+        <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl group-hover:scale-110 transition-transform duration-300">
+          <Coins className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <p className="text-sm text-gray-500 mb-1">Agent Cost</p>
+          <p className="font-semibold text-pink-700 text-md">{job.agentCost}</p>
+        </div>
+      </div>
+    </motion.div>
+  )}
 
               <motion.div
                 className="group relative bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-2xl border border-green-100 hover:border-green-200 transition-all duration-300"

@@ -7,8 +7,7 @@ import {
   CheckCircle,
   FileText,
   Send,
-  Heart,
-  HeartOff
+  Heart
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,47 +15,48 @@ const JobCard = ({ job, onApply, onViewDetails }) => {
   const { user, loading, saveJob, unsaveJob, isJobSaved } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
 
   // Helper function to check if user is candidate
   const isCandidate = user && user.userType === 'candidate';
 
-  // Check if job is saved on component mount
+  // Check if job is saved and applied on component mount
   useEffect(() => {
-    const checkSavedStatus = async () => {
+    const checkStatuses = async () => {
       if (isCandidate && job._id && !loading) {
         try {
+          // Check if job is saved
           const saved = await isJobSaved(job._id);
           setIsSaved(saved);
+
+          // Check if user has applied
+          const applied = job.applicants?.some(
+            (applicant) => applicant.userId === user._id
+          );
+          setIsApplied(applied);
         } catch (error) {
-          console.error('Error checking saved status:', error);
+          console.error('Error checking job statuses:', error);
         }
       }
     };
 
-    checkSavedStatus();
-  }, [job._id, isCandidate, isJobSaved, loading]);
+    checkStatuses();
+  }, [job._id, job.applicants, isCandidate, isJobSaved, user, loading]);
 
   const handleSaveToggle = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('Heart button clicked!'); // Debug log
-
-    if (!isCandidate) {
-      console.log('User is not a candidate');
-      return;
-    }
+    if (!isCandidate) return;
 
     setIsLoading(true);
     try {
       if (isSaved) {
         await unsaveJob(job._id);
         setIsSaved(false);
-        console.log('Job unsaved successfully');
       } else {
         await saveJob(job._id);
         setIsSaved(true);
-        console.log('Job saved successfully');
       }
     } catch (error) {
       console.error('Error toggling job save:', error);
@@ -76,8 +76,8 @@ const JobCard = ({ job, onApply, onViewDetails }) => {
           onClick={handleSaveToggle}
           disabled={isLoading}
           className={`absolute top-4 right-4 z-20 p-2 rounded-full transition-all duration-300 ${
-            isSaved 
-              ? 'bg-red-100 text-red-500 hover:bg-red-200' 
+            isSaved
+              ? 'bg-red-100 text-red-500 hover:bg-red-200'
               : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-red-500'
           } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           whileHover={{ scale: 1.1 }}
@@ -99,7 +99,8 @@ const JobCard = ({ job, onApply, onViewDetails }) => {
         <motion.div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
           style={{
-            background: 'linear-gradient(45deg, rgba(15, 121, 197, 0.02), rgba(27, 56, 144, 0.02))'
+            background:
+              'linear-gradient(45deg, rgba(15, 121, 197, 0.02), rgba(27, 56, 144, 0.02))'
           }}
         />
 
@@ -138,14 +139,18 @@ const JobCard = ({ job, onApply, onViewDetails }) => {
               className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg group-hover:bg-green-50 transition-colors duration-300"
             >
               <Coins className="w-4 h-4 text-green-500" />
-              <span className="font-medium text-green-600 text-sm">{job.salary}</span>
+              <span className="font-medium text-green-600 text-sm">
+                {job.salary}
+              </span>
             </motion.div>
           </div>
 
           {/* Requirements preview */}
           {job.requirements && job.requirements.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Requirements:</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                Requirements:
+              </h4>
               <ul className="space-y-2">
                 {job.requirements.slice(0, 2).map((req, i) => (
                   <li key={i} className="flex items-start gap-2">
@@ -174,18 +179,28 @@ const JobCard = ({ job, onApply, onViewDetails }) => {
               View Details
             </motion.button>
 
-            {/* Apply button - only show for candidates */}
-            {isCandidate && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold hover-glow transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
-                onClick={() => onApply && onApply(job)}
-              >
-                <Send className="w-4 h-4" />
-                Apply
-              </motion.button>
-            )}
+            {/* Apply button or status */}
+            {isCandidate &&
+              (isApplied ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex-1 px-4 py-2 bg-green-100 text-green-600 rounded-lg text-sm font-semibold shadow-inner flex items-center justify-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Applied
+                </motion.div>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold hover-glow transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
+                  onClick={() => onApply && onApply(job)}
+                >
+                  <Send className="w-4 h-4" />
+                  Apply
+                </motion.button>
+              ))}
           </div>
 
           {/* Save status indicator */}

@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
     type: Number,
   },
 
+  assignedto: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AdminUser', // Admin
+  },
+
   // Candidate-specific fields
   picture: {
     type: String, // Profile picture path/URL
@@ -44,6 +49,38 @@ const userSchema = new mongoose.Schema({
   },
   country: {
     type: String,
+  },
+  skills: [String],
+  experience: {
+    type: String
+  },
+  education: [
+  {
+    name: { type: String, },        
+    institution: { type: String, }, 
+    period: { type: String, }       // e.g., 2020-2024
+  }
+  ],
+  aboutMe: {
+    type: String,
+  },
+  languages: [String],
+  visaStatus: {
+    type: String,
+    enum: ['Not Started', 'Processing', 'Approved', 'Rejected', 'Completed']
+  },
+  gender: {
+    type: String,
+    enum: ['Male', 'Female', 'Prefer Not to Say'],
+  },
+  dob: {
+    type: Date,
+  },
+  social: {
+    linkedin: { type: String, default: "" },
+    github: { type: String, default: "" },
+    twitter: { type: String, default: "" },
+    portfolio: { type: String, default: "" },
   },
   appliedJobs: [
     {
@@ -73,6 +110,10 @@ const userSchema = new mongoose.Schema({
       },
     },
   ],
+  status: { type: String, enum: ["New Application", "Assessment", "Documentation", "Visa Processing", "Offer Received", "Completed", "Rejected"] },
+  priority: { type: String, enum: ["Low", "Medium", "High"], default: "Low" },
+  jobTitle: { type: String},
+  jobCategories: [{ type: String, enum: ["Accounting", "Human Resource", "Marketing", "Project Management", "Software Development", "Data Science", "CyberSecurity", "Graphic Design"] }],
 
   // Agent-specific fields
   companyName: {
@@ -105,10 +146,25 @@ const userSchema = new mongoose.Schema({
       name: String,
       email: String,
       phone: String,
+      gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Prefer Not to Say'],
+      },
       skills: [String],
       experience: String,
-      qualifications: [String],
-      status: { type: String, enum: ["Pending", "Reviewed", "Approved", "Rejected"], default: "Pending" },
+      education: [
+      {
+        name: { type: String, },        
+        institution: { type: String, }, 
+        period: { type: String, }       // e.g., 2020-2024
+      }
+      ],
+      status: { type: String, enum: ["New Application", "Assessment", "Documentation", "Visa Processing", "Offer Received", "Completed", "Rejected"] },
+      visaStatus: {
+        type: String,
+        enum: ['Not Started', 'Processing', 'Approved', 'Rejected', 'Completed']
+      },
+      priority: { type: String, enum: ["Low", "Medium", "High"], default: "Low" },
       addedAt: {
         type: Date,
         default: Date.now,
@@ -138,7 +194,7 @@ const userSchema = new mongoose.Schema({
   ],
   assignedTo: { // New: For agent-candidate permanent assignment by admin
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'AdminUser'
   }
 }, { timestamps: true });
 

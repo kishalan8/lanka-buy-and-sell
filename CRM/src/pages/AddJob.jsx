@@ -14,6 +14,8 @@ const AddJob = () => {
     requirements: "",
     skills: "",
     salary: "",
+    candidateCost:"",
+    agentCost:"",
     ageMin: 18,
     ageMax: 60,
     expiringAt: "",
@@ -44,6 +46,8 @@ const AddJob = () => {
           max: Number(formData.ageMax),
         },
         salary: formData.salary ? Number(formData.salary) : null,
+        candidateCost: formData.candidateCost ? Number(formData.candidateCost) : null,
+        agentCost: formData.agentCost ? Number(formData.agentCost) : null,
       };
 
       await axios.post("http://localhost:5000/api/jobs", payload, {
@@ -62,6 +66,8 @@ const AddJob = () => {
         requirements: "",
         skills: "",
         salary: "",
+        candidateCost: "",
+        agentCost: "",
         ageMin: 18,
         ageMax: 60,
         expiringAt: "",
@@ -131,6 +137,22 @@ const AddJob = () => {
           name="salary"
           placeholder="Salary"
           value={formData.salary}
+          onChange={handleChange}
+          className="border p-2 rounded"
+        />
+        <input
+          type="number"
+          name="candidateCost"
+          placeholder="candidateCost"
+          value={formData.candidateCost}
+          onChange={handleChange}
+          className="border p-2 rounded"
+        />
+        <input
+          type="number"
+          name="agentCost"
+          placeholder="agentCost"
+          value={formData.agentCost}
           onChange={handleChange}
           className="border p-2 rounded"
         />

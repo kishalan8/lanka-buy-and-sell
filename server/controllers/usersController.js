@@ -16,7 +16,8 @@ const generateToken = (id, role = 'user') => {
 // @route   GET /api/users
 // @access  Private/Admin
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({});
+  const users = await User.find({})
+  .populate("assignedTo", "name email");
   res.json(users);
 });
 
@@ -24,7 +25,8 @@ const getUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/users/:id
 // @access  Private/Admin
 const getUserById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).select('-password');
+  const user = await User.findById(req.params.id).select('-password')
+  .populate("assignedTo", "name email");
   if (user) {
     res.json(user);
   } else {
@@ -36,26 +38,57 @@ const getUserById = asyncHandler(async (req, res) => {
 // @desc    Update user
 // @route   PUT /api/users/:id
 // @access  Private/Admin
-const updateUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (user) {
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-    if (req.body.password) {
-      user.password = req.body.password;
-    }
-    const updatedUser = await user.save();
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
-    });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
+const updateUser = async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
   }
-});
+
+  user.name = req.body.name || user.name;
+  if (req.body.password && req.body.password.trim()) {
+    user.password = req.body.password;
+  }
+  user.address = req.body.address || user.address;
+  user.country = req.body.country || user.country;
+  user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+
+  // Skills
+  user.skills = req.body.skills
+    ? Array.isArray(req.body.skills)
+      ? req.body.skills
+      : req.body.skills.split(',').map(s => s.trim())
+    : user.skills;
+
+  user.experience = req.body.experience || user.experience;
+
+  // Education (structured)
+  user.education = req.body.education
+    ? Array.isArray(req.body.education)
+      ? req.body.education
+      : JSON.parse(req.body.education)
+    : user.education;
+
+  // Files
+  if (req.files?.picture) user.picture = req.files.picture[0].path;
+  if (req.files?.CV) user.CV = req.files.CV[0].path;
+
+  const updatedUser = await user.save();
+
+  res.json({
+    _id: updatedUser._id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    skills: updatedUser.skills,
+    experience: updatedUser.experience,
+    education: updatedUser.education,
+    address: updatedUser.address,
+    country: updatedUser.country,
+    phoneNumber: updatedUser.phoneNumber,
+    picture: updatedUser.picture,
+    CV: updatedUser.CV
+  });
+};
 
 // @desc    Delete user
 // @route   DELETE /api/users/:id
@@ -83,128 +116,171 @@ const getManagedCandidates = asyncHandler(async (req, res) => {
   res.json({ success: true, data: user.managedCandidates });
 });
 
+// ------------------------
 // POST /api/agent/candidates
-// Protected, Agent only
+// ------------------------
 const addManagedCandidate = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (user.userType !== 'agent') {
-    res.status(403);
-    throw new Error('Access denied');
+  const agent = await User.findById(req.user._id);
+  if (!agent || agent.userType !== 'agent') {
+    return res.status(403).json({ message: 'Access denied' });
   }
 
-  const { name, email, phone, skills, experience, address, qualifications } = req.body;
+  try {
+    let { name, email, phone, skills, experience, address, education, status } = req.body;
 
-  const candidateData = {
-    name,
-    email,
-    phone,
-    skills: Array.isArray(skills) ? skills : skills?.split(',').map(s => s.trim()),
-    experience,
-    address,
-    qualifications: Array.isArray(qualifications) ? qualifications : qualifications?.split(',').map(q => q.trim()),
-    addedAt: new Date(),
-    documents: [] // Initialize empty documents array
-  };
+    // Ensure skills is an array
+    skills = Array.isArray(skills) ? skills : skills?.split(',').map(s => s.trim()) || [];
 
-  // Handle multiple uploaded files with types
-  // req.files should be an array of files with 'fieldname' as type
-  if (req.files && req.files.length > 0) {
-    req.files.forEach(file => {
-      candidateData.documents.push({
-        type: file.fieldname, // e.g., 'cv', 'passport', 'picture', 'drivingLicense'
-        fileName: file.originalname,
-        fileUrl: file.path,
-        status: 'Pending'
-      });
-    });
-  }
+    // Parse education array
+    if (education) {
+      if (typeof education === 'string') education = JSON.parse(education);
+      if (!Array.isArray(education)) education = [];
+    } else education = [];
 
-  // Check for existing candidate by email
-  const existingCandidate = user.managedCandidates.find(c => c.email === email);
-  if (existingCandidate) {
-    return res.status(400).json({ success: false, message: 'Candidate with this email already exists' });
-  }
+    // Prevent duplicate emails
+    if (agent.managedCandidates.find(c => c.email === email)) {
+      return res.status(400).json({ message: 'Candidate with this email already exists' });
+    }
 
-  user.managedCandidates.push(candidateData);
-  await user.save();
+    const candidateData = {
+      name,
+      email,
+      phone,
+      skills,
+      experience,
+      address,
+      status: status || 'Pending',
+      education: education ? JSON.parse(education) : [],
+      addedAt: new Date(),
+      documents: []
+    };
 
-  res.status(201).json({ success: true, message: 'Candidate added successfully', data: candidateData });
-});
-
-
-// PUT /api/agent/candidates/:candidateId
-// Protected, Agent only
-const updateManagedCandidate = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (user.userType !== 'agent') {
-    res.status(403);
-    throw new Error('Access denied');
-  }
-
-  const candidate = user.managedCandidates.id(req.params.candidateId);
-  if (!candidate) {
-    res.status(404);
-    throw new Error('Candidate not found');
-  }
-
-  // Update basic info
-  candidate.name = req.body.name || candidate.name;
-  candidate.email = req.body.email || candidate.email;
-  candidate.phone = req.body.phone || candidate.phone;
-  candidate.skills = req.body.skills 
-    ? Array.isArray(req.body.skills) 
-      ? req.body.skills 
-      : req.body.skills.split(',').map(s => s.trim())
-    : candidate.skills;
-  candidate.experience = req.body.experience || candidate.experience;
-  candidate.address = req.body.address || candidate.address;
-  candidate.qualifications = req.body.qualifications
-    ? Array.isArray(req.body.qualifications)
-      ? req.body.qualifications
-      : req.body.qualifications.split(',').map(q => q.trim())
-    : candidate.qualifications;
-
-  // Update / add documents
-  if (req.files && req.files.length > 0) {
-    req.files.forEach(file => {
-      // Check if document of this type exists; if so, replace, else add
-      const existingDoc = candidate.documents.find(doc => doc.type === file.fieldname);
-      if (existingDoc) {
-        existingDoc.fileName = file.originalname;
-        existingDoc.fileUrl = file.path;
-        existingDoc.status = 'Pending';
-        existingDoc.uploadedAt = new Date();
-      } else {
-        candidate.documents.push({
-          type: file.fieldname,
-          fileName: file.originalname,
-          fileUrl: file.path,
-          status: 'Pending',
-          uploadedAt: new Date()
+    // Handle uploaded files
+    if (req.files) {
+      Object.keys(req.files).forEach(key => {
+        const fileArray = req.files[key];
+        fileArray.forEach(file => {
+          candidateData.documents.push({
+            type: key,
+            fileName: file.originalname,
+            fileUrl: file.path,
+            status: 'Pending',
+            uploadedAt: new Date()
+          });
         });
+      });
+    }
+
+    agent.managedCandidates.push(candidateData);
+    await agent.save();
+
+    res.status(201).json({ success: true, message: 'Candidate added successfully', data: candidateData });
+  } catch (error) {
+    console.error('Error adding candidate:', error);
+    res.status(500).json({ success: false, message: 'Server error while adding candidate' });
+  }
+});
+
+// ------------------------
+// PUT /api/agent/candidates/:candidateId
+// ------------------------
+const updateManagedCandidate = asyncHandler(async (req, res) => {
+  const agent = await User.findById(req.user._id);
+  if (!agent || agent.userType !== 'agent') {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  const candidate = agent.managedCandidates.id(req.params.candidateId);
+  if (!candidate) return res.status(404).json({ message: 'Candidate not found' });
+
+  try {
+    // Basic fields
+    candidate.name = req.body.name || candidate.name;
+    candidate.email = req.body.email || candidate.email;
+    candidate.phone = req.body.phone || candidate.phone;
+    candidate.address = req.body.address || candidate.address;
+    candidate.experience = req.body.experience || candidate.experience;
+    candidate.status = req.body.status || candidate.status;
+
+    // Update skills
+    if (req.body.skills) {
+      candidate.skills = Array.isArray(req.body.skills)
+        ? req.body.skills
+        : req.body.skills.split(',').map(s => s.trim());
+    }
+
+    // Update education array properly
+    if (req.body.education) {
+      if (typeof req.body.education === 'string') {
+        try {
+          candidate.education = JSON.parse(req.body.education);
+        } catch (err) {
+          return res.status(400).json({ message: 'Invalid education format' });
+        }
+      } else {
+        candidate.education = req.body.education;
       }
-    });
+    }
+
+    // Update/add documents
+    if (req.files) {
+      Object.keys(req.files).forEach(key => {
+        req.files[key].forEach(file => {
+          const existingDoc = candidate.documents.find(doc => doc.type === key);
+          if (existingDoc) {
+            existingDoc.fileName = file.originalname;
+            existingDoc.fileUrl = file.path;
+            existingDoc.status = 'Pending';
+            existingDoc.uploadedAt = new Date();
+          } else {
+            candidate.documents.push({
+              type: key,
+              fileName: file.originalname,
+              fileUrl: file.path,
+              status: 'Pending',
+              uploadedAt: new Date()
+            });
+          }
+        });
+      });
+    }
+
+    await agent.save();
+    res.json({ success: true, message: 'Candidate updated successfully', data: candidate });
+  } catch (error) {
+    console.error('Error updating candidate:', error);
+    res.status(500).json({ success: false, message: 'Server error while updating candidate' });
   }
-
-  await user.save();
-
-  res.json({ success: true, message: 'Candidate updated successfully', data: candidate });
 });
 
 
-// New: Delete managed candidate
-// @route   DELETE /api/agent/candidates/:id
-// @access  Private/Agent
+// DELETE /api/agent/candidates/:candidateId
+// Protected, Agent only
 const deleteManagedCandidate = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (user.userType !== 'agent') {
-    res.status(403);
-    throw new Error('Access denied');
+  const agent = await User.findById(req.user._id);
+
+  if (!agent || agent.userType !== 'agent') {
+    return res.status(403).json({ message: 'Access denied' });
   }
-  user.managedCandidates.id(req.params.id).remove();
-  await user.save();
-  res.json({ success: true, message: 'Candidate deleted' });
+
+  const candidate = agent.managedCandidates.id(req.params.candidateId);
+  if (!candidate) {
+    return res.status(404).json({ message: 'Candidate not found' });
+  }
+
+  try {
+    // Remove candidate
+    candidate.remove();
+
+    await agent.save();
+
+    res.json({ success: true, message: 'Candidate deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting candidate:', error);
+    res.status(500).json({ success: false, message: 'Server error while deleting candidate' });
+  }
 });
+
 
 // New: Create inquiry for candidate
 // @route   POST /api/agent/inquiries
@@ -323,29 +399,87 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// Get user profile by admin
+const getUsersProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Update user profile
 const updateUserProfile = async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  if (user) {
-    // Update name instead of fullName
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  try {
+    // Update basic fields
     user.name = req.body.name || user.name;
+    user.address = req.body.address || user.address;
+    user.country = req.body.country || user.country;
+    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    user.gender = req.body.gender || user.gender;
+    user.dob = req.body.dob || user.dob;
+    user.aboutMe = req.body.aboutMe || user.aboutMe;
+    user.jobTitle = req.body.jobTitle || user.jobTitle;
+    user.jobCategories = req.body.jobCategories || user.jobCategories;
 
     if (req.body.password) {
       user.password = req.body.password;
     }
 
-    // Update other fields
-    user.address = req.body.address || user.address;
-    user.country = req.body.country || user.country;
-    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    // Update skills if provided
+    if (req.body.skills) {
+      user.skills = Array.isArray(req.body.skills)
+        ? req.body.skills
+        : req.body.skills.split(',').map(s => s.trim());
+    }
 
-    // Files
+    // Update experience
+    if (req.body.experience) {
+      user.experience = req.body.experience;
+    }
+
+    // Update education (array of objects)
+    if (req.body.education) {
+      if (typeof req.body.education === 'string') {
+        try {
+          user.education = JSON.parse(req.body.education);
+        } catch (err) {
+          return res.status(400).json({ message: 'Invalid education format' });
+        }
+      } else {
+        user.education = req.body.education;
+      }
+    }
+
+    // Handle file uploads
     if (req.files?.picture) {
-      user.picture = req.files.picture[0].path; // assuming Cloudinary or similar
+      user.picture = req.files.picture[0].path;
     }
     if (req.files?.CV) {
       user.CV = req.files.CV[0].path;
+    }
+
+    // Ensure social is always an object
+    if (!user.social || Array.isArray(user.social)) {
+      user.social = { linkedin: '', github: '', twitter: '', portfolio: '' };
+    }
+    if (req.body.social) {
+      user.social.linkedin = req.body.social.linkedin || user.social.linkedin;
+      user.social.github = req.body.social.github || user.social.github;
+      user.social.twitter = req.body.social.twitter || user.social.twitter;
+      user.social.portfolio = req.body.social.portfolio || user.social.portfolio;
     }
 
     const updatedUser = await user.save();
@@ -354,17 +488,27 @@ const updateUserProfile = async (req, res) => {
       _id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
+      skills: updatedUser.skills,
+      experience: updatedUser.experience,
+      education: updatedUser.education,
       picture: updatedUser.picture,
       CV: updatedUser.CV,
       address: updatedUser.address,
       country: updatedUser.country,
       phoneNumber: updatedUser.phoneNumber,
+      gender: updatedUser.gender,
+      dob: updatedUser.dob,
+      aboutMe: updatedUser.aboutMe,
+      jobTitle: updatedUser.jobTitle,
+      jobCategories: updatedUser.jobCategories,
+      social: updatedUser.social,
     });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error during profile update' });
   }
 };
+
 
 const loginUser = async (req, res) => {
   try {
@@ -623,6 +767,58 @@ const updateCandidateStatus = async (req, res) => {
   }
 };
 
+const adminUpdateUser = asyncHandler(async (req, res) => {
+  const { visaStatus, status, assignedTo, priority } = req.body;
+  const userId = req.params.id;
+
+  const validStatus = ["New Application", "Assessment", "Documentation", "Visa Processing", "Offer Received", "Completed", "Rejected"];
+  const validPriority = ["High", "Medium", "Low"];
+  const validVisaStatus = ['Not Started', 'Processing', 'Approved', 'Rejected', 'Completed'];
+
+  const user = await User.findById(userId);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const updateData = {};
+
+  // Only candidates can update status and visaStatus
+  if (user.userType !== 'agent') {
+    if (status) {
+      if (!validStatus.includes(status)) {
+        res.status(400);
+        throw new Error('Invalid status value');
+      }
+      updateData.status = status;
+    }
+
+    if (visaStatus) {
+      if (!validVisaStatus.includes(visaStatus)) {
+        res.status(400);
+        throw new Error('Invalid visa status value');
+      }
+      updateData.visaStatus = visaStatus;
+    }
+  }
+
+  // Both agents and candidates can update these
+  if (priority) {
+    if (!validPriority.includes(priority)) {
+      res.status(400);
+      throw new Error('Invalid priority value');
+    }
+    updateData.priority = priority;
+  }
+
+  if (assignedTo !== undefined) {
+    updateData.assignedTo = assignedTo;
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+  res.json(updatedUser);
+});
+
 module.exports = {
   getUsers,
   getUserById,
@@ -644,5 +840,7 @@ module.exports = {
   signupUser,
   getUserApplications,
   getAllManagedCandidates,
-  updateCandidateStatus
+  updateCandidateStatus,
+  adminUpdateUser,
+  getUsersProfile,
 }; 

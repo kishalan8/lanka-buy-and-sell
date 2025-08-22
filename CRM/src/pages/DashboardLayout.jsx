@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { to: "/admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/admin-dashboard/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin-dashboard/leads", label: "Leads", icon: ClipboardList },
   { to: "/admin-dashboard/clients", label: "Clients", icon: Users },
+  { to: "/admin-dashboard/meetings", label: "Meetings", icon: Users },
+  { to: "/admin-dashboard/addmeeting", label: "Add Meeting", icon: Users },
   { to: "/admin-dashboard/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/admin-dashboard/reports", label: "Reports", icon: BarChart3 },
   { to: "/admin-dashboard/adminchat", label: "Chat", icon: BarChart3 },

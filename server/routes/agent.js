@@ -79,20 +79,35 @@ router.put(
     try {
       const { candidateId } = req.params;
       const updateData = req.body;
+      console.log('requestbody:', updateData);
+
+      // Fix: parse skills
       if (updateData.skills && typeof updateData.skills === 'string') {
         updateData.skills = updateData.skills.split(',').map(s => s.trim());
       }
 
+      // Fix: parse education if it’s a string
+      if (updateData.education && typeof updateData.education === 'string') {
+        try {
+          updateData.education = JSON.parse(updateData.education);
+        } catch (e) {
+          console.error("Invalid education JSON", e);
+          updateData.education = [];
+        }
+      }
+
       const agent = await User.findById(req.user._id);
       const candidate = agent.managedCandidates.id(candidateId);
-      if (!candidate) return res.status(404).json({ success: false, message: 'Candidate not found' });
+      if (!candidate) {
+        return res.status(404).json({ success: false, message: 'Candidate not found' });
+      }
 
-      // Update basic fields
+      // Update fields
       Object.keys(updateData).forEach(key => {
         if (updateData[key] !== undefined) candidate[key] = updateData[key];
       });
 
-      // Update / add documents
+      // Update/add documents
       if (req.files) {
         Object.keys(req.files).forEach(field => {
           const file = req.files[field][0];
@@ -139,32 +154,78 @@ router.post(
   ]),
   async (req, res) => {
     try {
-      const { name, email, phone, skills, experience, address, qualifications } = req.body;
+      const { name, email, phone, skills, experience, address, qualifications, education } = req.body;
+
+      // Parse skills
+      const parsedSkills = Array.isArray(skills) ? skills : skills?.split(',').map(s => s.trim());
+
+      // Parse qualifications
+      const parsedQualifications = Array.isArray(qualifications)
+        ? qualifications
+        : qualifications?.split(',').map(s => s.trim());
+
+      // Parse education if sent as string
+      let parsedEducation = [];
+      if (education) {
+        if (typeof education === "string") {
+          try {
+            parsedEducation = JSON.parse(education);
+          } catch (err) {
+            console.error("Invalid education JSON:", err);
+            parsedEducation = [];
+          }
+        } else if (Array.isArray(education)) {
+          parsedEducation = education;
+        }
+      }
 
       const candidateData = {
         name,
         email,
         phone,
-        skills: Array.isArray(skills) ? skills : skills?.split(',').map(s => s.trim()),
+        skills: parsedSkills,
         experience,
         address,
-        qualifications: Array.isArray(qualifications) ? qualifications : qualifications?.split(',').map(s => s.trim()),
+        qualifications: parsedQualifications,
+        education: parsedEducation,   // ✅ include parsed education
         addedAt: new Date(),
         documents: [],
       };
 
       // Push uploaded documents
       if (req.files) {
-        if (req.files.cv) candidateData.documents.push({ type: 'CV', fileName: req.files.cv[0].originalname, fileUrl: req.files.cv[0].path });
-        if (req.files.passport) candidateData.documents.push({ type: 'Passport', fileName: req.files.passport[0].originalname, fileUrl: req.files.passport[0].path });
-        if (req.files.picture) candidateData.documents.push({ type: 'Picture', fileName: req.files.picture[0].originalname, fileUrl: req.files.picture[0].path });
-        if (req.files.drivingLicense) candidateData.documents.push({ type: 'DrivingLicense', fileName: req.files.drivingLicense[0].originalname, fileUrl: req.files.drivingLicense[0].path });
+        if (req.files.cv)
+          candidateData.documents.push({
+            type: 'CV',
+            fileName: req.files.cv[0].originalname,
+            fileUrl: req.files.cv[0].path
+          });
+        if (req.files.passport)
+          candidateData.documents.push({
+            type: 'Passport',
+            fileName: req.files.passport[0].originalname,
+            fileUrl: req.files.passport[0].path
+          });
+        if (req.files.picture)
+          candidateData.documents.push({
+            type: 'Picture',
+            fileName: req.files.picture[0].originalname,
+            fileUrl: req.files.picture[0].path
+          });
+        if (req.files.drivingLicense)
+          candidateData.documents.push({
+            type: 'DrivingLicense',
+            fileName: req.files.drivingLicense[0].originalname,
+            fileUrl: req.files.drivingLicense[0].path
+          });
       }
 
       const agent = await User.findById(req.user._id);
       const existingCandidate = agent.managedCandidates.find(c => c.email === email);
       if (existingCandidate) {
-        return res.status(400).json({ success: false, message: 'Candidate with this email already exists' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'Candidate with this email already exists' });
       }
 
       agent.managedCandidates.push(candidateData);
@@ -177,7 +238,6 @@ router.post(
     }
   }
 );
-
 
 // --------------------
 // GET all managed candidates
@@ -192,41 +252,6 @@ router.get('/candidates', protect, agentOnly, async (req, res) => {
   }
 });
 
-// --------------------
-// UPDATE managed candidate
-// --------------------
-router.put(
-  '/candidates/:candidateId',
-  protect,
-  agentOnly,
-  upload.single('cv'),
-  async (req, res) => {
-    try {
-      const { candidateId } = req.params;
-      const updateData = req.body;
-
-      if (updateData.skills && typeof updateData.skills === 'string') {
-        updateData.skills = updateData.skills.split(',').map(s => s.trim());
-      }
-
-      if (req.file) updateData.cv = req.file.path;
-
-      const agent = await User.findById(req.user._id);
-      const candidateIndex = agent.managedCandidates.findIndex(c => c._id.toString() === candidateId);
-      if (candidateIndex === -1) return res.status(404).json({ success: false, message: 'Candidate not found' });
-
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] !== undefined) agent.managedCandidates[candidateIndex][key] = updateData[key];
-      });
-
-      await agent.save();
-      res.json({ success: true, message: 'Candidate updated successfully', data: agent.managedCandidates[candidateIndex] });
-    } catch (error) {
-      console.error('Update managed candidate error:', error);
-      res.status(500).json({ success: false, message: 'Error updating candidate' });
-    }
-  }
-);
 
 // --------------------
 // DELETE managed candidate

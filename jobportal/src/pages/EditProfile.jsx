@@ -1,327 +1,234 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { User, Mail, Book, Phone, MapPin, Briefcase, Calendar, FileText, Edit3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const jobCategoryOptions = [
+  "Accounting",
+  "Human Resource",
+  "Marketing",
+  "Project Management",
+  "Software Development",
+  "Data Science",
+  "CyberSecurity",
+  "Graphic Design",
+];
 
 const EditProfile = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    firstname: "",
-    lastname: "",
-    address: "",
-    country: "",
-    phoneNumber: "",
-    currentPassword: "",
-    newPassword: "",
-    confirmNewPassword: "",
-  });
-
-  const [pictureFile, setPictureFile] = useState(null);
-  const [resumeFile, setResumeFile] = useState(null);
-  const [updating, setUpdating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
+      if (!token) return navigate("/login");
 
       try {
         const res = await axios.get("/api/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        setFormData((prev) => ({
-          ...prev,
-          name: res.data.name || "",
-          firstname: res.data.firstname || "",
-          lastname: res.data.lastname || "",
-          address: res.data.address || "",
-          country: res.data.country || "",
-          phoneNumber: res.data.phoneNumber || "",
-        }));
+        const profile = res.data;
+        // Ensure social fields are strings
+        profile.social = {
+          linkedin: profile.social?.linkedin || "",
+          github: profile.social?.github || "",
+          twitter: profile.social?.twitter || "",
+          portfolio: profile.social?.portfolio || "",
+        };
+        setUser(profile);
+        setLoading(false);
       } catch (err) {
-        console.error("Failed to fetch profile:", err);
-        if (err.response?.status === 401) {
-          localStorage.removeItem("token");
-          navigate("/login");
-        }
+        console.error(err);
+        setError("Failed to load profile");
+        setLoading(false);
       }
     };
-
     fetchUser();
   }, [navigate]);
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (key, value) => {
+    setUser({ ...user, [key]: value });
   };
 
-  const handlePictureChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setPictureFile(e.target.files[0]);
-    }
+  const handleSocialChange = (platform, value) => {
+    setUser({ ...user, social: { ...user.social, [platform]: value } });
   };
 
-  const handleResumeChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0]);
-    }
+  const handleJobCategoriesChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, (opt) => opt.value);
+    setUser({ ...user, jobCategories: selected });
+  };
+
+  const handleFileChange = (key, file) => {
+    setUser({ ...user, [key]: file });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setUpdating(true);
-    setError("");
-    setSuccess("");
-
-    // Validate new passwords
-    if (
-      formData.newPassword &&
-      formData.newPassword !== formData.confirmNewPassword
-    ) {
-      setError("New password and confirm password do not match");
-      setUpdating(false);
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
     try {
-      const data = new FormData();
-      data.append("name", formData.name);
-      data.append("firstname", formData.firstname);
-      data.append("lastname", formData.lastname);
-      data.append("address", formData.address);
-      data.append("country", formData.country);
-      data.append("phoneNumber", formData.phoneNumber);
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
 
-      if (formData.currentPassword)
-        data.append("currentPassword", formData.currentPassword);
-      if (formData.newPassword) data.append("newPassword", formData.newPassword);
-
-      if (pictureFile) data.append("picture", pictureFile);
-      if (resumeFile) data.append("resume", resumeFile);
-
-      const res = await axios.put("/api/users/profile", data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+      Object.keys(user).forEach((key) => {
+        if (key === "social" || key === "jobCategories") {
+          formData.append(key, JSON.stringify(user[key]));
+        } else if (key === "CV" || key === "picture") {
+          if (user[key] instanceof File) formData.append(key, user[key]);
+        } else {
+          formData.append(key, user[key] || "");
+        }
       });
 
-      setSuccess("Profile updated successfully!");
-      setFormData((prev) => ({
-        ...prev,
-        currentPassword: "",
-        newPassword: "",
-        confirmNewPassword: "",
-      }));
+      await axios.put("/api/users/profile", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      navigate("/profile");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to update profile. Please try again."
-      );
-    } finally {
-      setUpdating(false);
+      console.error(err);
+      setError("Failed to update profile");
     }
   };
 
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+
+  if (error) return <div className="text-center text-red-600 mt-10">{error}</div>;
+
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-6">Edit Profile</h2>
+    <motion.form onSubmit={handleSubmit} className="space-y-8">
+      <motion.div>
+        <h1 className="text-heading-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent text-center md:text-left">
+          Edit Profile
+        </h1>
+        <motion.div
+          className="h-1 w-24 rounded-full mt-3 mx-auto md:mx-0"
+          style={{ background: "linear-gradient(90deg, #1B3890, #0F79C5)" }}
+          initial={{ width: 0 }}
+          animate={{ width: 96 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+        />
+      </motion.div>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-      {success && <p className="text-green-600 mb-4">{success}</p>}
+      {/* Profile Fields */}
+      <div className="lg:bg-white/70 lg:backdrop-blur-xl rounded-3xl lg:border lg:border-white/30 lg:shadow-2xl overflow-hidden">
+        <div className="relative z-10 mx-auto py-3 lg:mx-0 lg:p-8 space-y-4">
+          {/* Picture Upload */}
+          <div className="flex flex-col md:flex-row md:items-center gap-6 mb-8">
+            <div className="w-24 h-24 rounded-2xl bg-gray-200 flex items-center justify-center overflow-hidden shadow-xl">
+              {user.picture && !(user.picture instanceof File) ? (
+                <img
+                  src={
+                    user.picture.startsWith("http")
+                      ? user.picture
+                      : `http://localhost:5000/${user.picture}`
+                  }
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-12 h-12 text-gray-600" />
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleFileChange("picture", e.target.files[0])}
+              className="md:w-60"
+            />
+          </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="name">
-            Full Name
-          </label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
+          {/* All Form Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 px-2">
+            <Field label="Full Name" value={user.name} onChange={(v) => handleChange("name", v)} />
+            <Field label="Email" value={user.email} onChange={(v) => handleChange("email", v)} type="email" />
+            <Field label="Phone" value={user.phoneNumber} onChange={(v) => handleChange("phoneNumber", v)} type="tel" />
+            <Field label="Address" value={user.address} onChange={(v) => handleChange("address", v)} />
+            <Field label="Country" value={user.country} onChange={(v) => handleChange("country", v)} />
+            <Field label="Job Title" value={user.jobTitle} onChange={(v) => handleChange("jobTitle", v)} />
+            
+            {/* Job Categories */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 rounded-xl bg-gray-50/50 border border-gray-200/50">
+              <div className="flex items-center gap-3 md:w-1/3">
+                <div className="p-2 md:p-3 rounded-xl bg-gray-100">
+                  <Briefcase className="w-5 h-5 text-gray-600" />
+                </div>
+                <label className="block text-sm text-muted-light">Job Categories</label>
+              </div>
+              <select
+                multiple
+                value={user.jobCategories}
+                onChange={handleJobCategoriesChange}
+                className="flex-1 p-2 border rounded-lg"
+              >
+                {jobCategoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="name">
-            First Name
-          </label>
-          <input
-            id="firstname"
-            name="firstname"
-            type="text"
-            value={formData.firstname}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
+            {/* Social Links */}
+            <Field label="LinkedIn" value={user.social.linkedin} onChange={(v) => handleSocialChange("linkedin", v)} />
+            <Field label="GitHub" value={user.social.github} onChange={(v) => handleSocialChange("github", v)} />
+            <Field label="Twitter" value={user.social.twitter} onChange={(v) => handleSocialChange("twitter", v)} />
+            <Field label="Portfolio" value={user.social.portfolio} onChange={(v) => handleSocialChange("portfolio", v)} />
 
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="name">
-            Last Name
-          </label>
-          <input
-            id="lastname"
-            name="lastname"
-            type="text"
-            value={formData.lastname}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
+            {/* CV Upload */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 rounded-xl bg-gray-50/50 border border-gray-200/50">
+              <div className="flex items-center gap-3 md:w-1/3">
+                <div className="p-2 md:p-3 rounded-xl bg-gray-100">
+                  <FileText className="w-5 h-5 text-gray-600" />
+                </div>
+                <label className="block text-sm text-muted-light">Resume (CV)</label>
+              </div>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => handleFileChange("CV", e.target.files[0])}
+                className="flex-1 p-2 border rounded-lg"
+              />
+            </div>
 
-        {/* Address */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="address">
-            Address
-          </label>
-          <input
-            id="address"
-            name="address"
-            type="text"
-            value={formData.address}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
+          </div>
 
-        {/* Country */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="country">
-            Country
-          </label>
-          <input
-            id="country"
-            name="country"
-            type="text"
-            value={formData.country}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
-        {/* Phone Number */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="phoneNumber">
-            Phone Number
-          </label>
-          <input
-            id="phoneNumber"
-            name="phoneNumber"
-            type="text"
-            value={formData.phoneNumber}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
-        {/* Password update section */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="currentPassword">
-            Current Password
-          </label>
-          <input
-            id="currentPassword"
-            name="currentPassword"
-            type="password"
-            value={formData.currentPassword}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            placeholder="Enter current password to change it"
-          />
-        </div>
-
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="newPassword">
-            New Password
-          </label>
-          <input
-            id="newPassword"
-            name="newPassword"
-            type="password"
-            value={formData.newPassword}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            placeholder="Enter new password"
-          />
-        </div>
-
-        <div>
-          <label
-            className="block font-semibold mb-1"
-            htmlFor="confirmNewPassword"
+          <button
+            type="submit"
+            className="px-6 py-3 bg-gradient-primary text-white rounded-xl font-medium shadow-lg flex items-center gap-2 mt-4"
           >
-            Confirm New Password
-          </label>
-          <input
-            id="confirmNewPassword"
-            name="confirmNewPassword"
-            type="password"
-            value={formData.confirmNewPassword}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            placeholder="Confirm new password"
-          />
+            <Edit3 className="w-4 h-4" /> Save Changes
+          </button>
         </div>
-
-        {/* Profile Picture */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="picture">
-            Profile Picture
-          </label>
-          <input
-            id="picture"
-            name="picture"
-            type="file"
-            accept="image/*"
-            onChange={handlePictureChange}
-            className="w-full"
-          />
-        </div>
-
-        {/* Resume */}
-        <div>
-          <label className="block font-semibold mb-1" htmlFor="resume">
-            Resume (PDF, DOC, DOCX)
-          </label>
-          <input
-            id="resume"
-            name="resume"
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={handleResumeChange}
-            className="w-full"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={updating}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition"
-        >
-          {updating ? "Updating..." : "Update Profile"}
-        </button>
-      </form>
-    </div>
+      </div>
+    </motion.form>
   );
 };
+
+const Field = ({ label, value, onChange, type = "text" }) => (
+  <div className="flex flex-col md:flex-row md:items-center gap-3 p-4 rounded-xl bg-gray-50/50 border border-gray-200/50">
+    <div className="flex items-center gap-3 md:w-1/3">
+      <div className="p-2 md:p-3 rounded-xl bg-gray-100">
+        <Book className="w-5 h-5 text-gray-600" />
+      </div>
+      <label className="block text-sm text-muted-light">{label}</label>
+    </div>
+    <input
+      type={type}
+      value={value || ""}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex-1 p-2 border rounded-lg"
+    />
+  </div>
+);
 
 export default EditProfile;

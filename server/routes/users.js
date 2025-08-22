@@ -19,7 +19,9 @@ const {
   updateUserProfile,
   loginUser,
   signupUser,
-  getUserApplications
+  getUserApplications,
+  adminUpdateUser,
+  getUsersProfile,
 } = require('../controllers/usersController');
 
 const {
@@ -96,6 +98,10 @@ router.delete('/agent/documents/:id', protect, deleteDocument);
 // User Management (Admin Only)
 // --------------------
 router.get("/", protectAdmin, authorizeAdmin("MainAdmin","SalesAdmin","AgentAdmin"), getUsers);
+
+router.get("/:id/user", protectAdmin, authorizeAdmin("MainAdmin","SalesAdmin","AgentAdmin"), getUsersProfile);
+
+router.put('/:id/leadupdate', protectAdmin, authorizeAdmin("MainAdmin","SalesAdmin","AgentAdmin"), adminUpdateUser);
 
 // Specific routes should come before parameterized ones
 router.get('/applications', protect, getUserApplications);

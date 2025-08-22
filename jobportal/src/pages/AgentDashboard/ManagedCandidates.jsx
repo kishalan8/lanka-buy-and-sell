@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Users, Plus, Search, Edit3, Trash2, Eye, FileText, Phone, Mail, User, X, Save, Upload, Clock, CheckCircle, XCircle, AlertCircle
+  Users, Plus, Search, Edit3, Trash2, Eye, FileText, Phone, Mail, User, X, Save, Upload, Clock, CheckCircle, XCircle, AlertCircle, Book
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -21,7 +21,8 @@ const ManagedCandidates = () => {
 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', skills: '', experience: '', status:'',
-    address: '', qualifications: '', cv: null, passport: null, picture: null, drivingLicense: null
+    education: [],
+    cv: null, passport: null, picture: null, drivingLicense: null
   });
 
   useEffect(() => { fetchCandidates(); }, []);
@@ -51,6 +52,25 @@ const ManagedCandidates = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleEducationChange = (index, field, value) => {
+    const newEducation = [...formData.education];
+    newEducation[index][field] = value;
+    setFormData(prev => ({ ...prev, education: newEducation }));
+  };
+
+  const addEducation = () => {
+    setFormData(prev => ({
+      ...prev,
+      education: [...prev.education, { degree: "", institution: "", year: "" }]
+    }));
+  };
+
+  const removeEducation = (index) => {
+    const newEducation = [...formData.education];
+    newEducation.splice(index, 1);
+    setFormData(prev => ({ ...prev, education: newEducation }));
+  };
+
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     setFormData(prev => ({ ...prev, [name]: files[0] }));
@@ -63,7 +83,11 @@ const ManagedCandidates = () => {
     try {
       const submitData = new FormData();
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') submitData.append(key, formData[key]);
+        if (formData[key] !== null && formData[key] !== '') {
+          if (key === 'education') {
+            submitData.append("education", JSON.stringify(formData.education));
+          } else submitData.append(key, formData[key]);
+        }
       });
 
       let response;
@@ -71,6 +95,7 @@ const ManagedCandidates = () => {
         response = await axios.put(`/api/agent/candidates/${editingCandidate._id}`, submitData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
+        console.log('response',response);
       } else {
         response = await axios.post('/api/agent/candidates', submitData, {
           headers: { 'Content-Type': 'multipart/form-data' }
@@ -92,8 +117,8 @@ const ManagedCandidates = () => {
     setFormData({
       name: candidate.name, email: candidate.email, phone: candidate.phone, status: candidate.status,
       skills: Array.isArray(candidate.skills) ? candidate.skills.join(', ') : candidate.skills,
-      experience: candidate.experience, address: candidate.address,
-      qualifications: Array.isArray(candidate.qualifications) ? candidate.qualifications.join(', ') : candidate.qualifications,
+      experience: candidate.experience,
+      education: candidate.education || [],
       cv: null, passport: null, picture: null, drivingLicense: null
     });
     setEditingCandidate(candidate);
@@ -111,7 +136,8 @@ const ManagedCandidates = () => {
   const resetForm = () => {
     setFormData({
       name: '', email: '', phone: '', skills: '', experience: '', status:'',
-      address: '', qualifications: '', cv: null, passport: null, picture: null, drivingLicense: null
+      education: [],
+      cv: null, passport: null, picture: null, drivingLicense: null
     });
     setEditingCandidate(null);
     setShowAddForm(false);
@@ -222,12 +248,14 @@ const ManagedCandidates = () => {
                     </div>
                   )}
                   {candidate.experience && <p className="text-gray-600 text-sm mb-2"><span className="font-medium">Experience:</span> {candidate.experience}</p>}
-                  {candidate.qualifications && (
+                  
+                  {/* Education */}
+                  {candidate.education && candidate.education.length > 0 && (
                     <div className="mb-3">
-                      <p className="text-sm text-gray-600 mb-1">Qualifications:</p>
+                      <p className="text-sm text-gray-600 mb-1">Education:</p>
                       <div className="flex flex-wrap gap-2">
-                        {(Array.isArray(candidate.qualifications) ? candidate.qualifications : candidate.qualifications.split(',')).map((q, i) => (
-                          <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{q.trim()}</span>
+                        {candidate.education.map((edu,i)=>(
+                          <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{edu.name} | {edu.institution} | {edu.period}</span>
                         ))}
                       </div>
                     </div>
@@ -256,7 +284,7 @@ const ManagedCandidates = () => {
         {showAddForm && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={resetForm}>
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              
+
               {/* Tabs */}
               <div className="flex border-b mb-4">
                 <button onClick={() => setActiveTab('info')} className={`px-4 py-2 ${activeTab==='info'?'border-b-2 border-blue-600 font-semibold':''}`}>Info</button>
@@ -264,6 +292,7 @@ const ManagedCandidates = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Info Tab */}
                 {activeTab === 'info' && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -284,21 +313,35 @@ const ManagedCandidates = () => {
                         <input type="text" name="experience" value={formData.experience} onChange={handleInputChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
                       </div>
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Skills (comma-separated)</label>
                       <input type="text" name="skills" value={formData.skills} onChange={handleInputChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
                     </div>
+
+                    {/* Education Section */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                      <textarea name="address" value={formData.address} onChange={handleInputChange} rows={3} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Qualifications (comma-separated)</label>
-                      <input type="text" name="qualifications" value={formData.qualifications} onChange={handleInputChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1"><Book className="w-4 h-4" /> Education</label>
+                      <div className="space-y-2">
+                        {formData.education.map((edu, idx) => (
+                          <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+                            <input type="text" placeholder="Degree" value={edu.name} onChange={e => handleEducationChange(idx,'name', e.target.value)} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                            <input type="text" placeholder="Institution" value={edu.institution} onChange={e => handleEducationChange(idx,'institution', e.target.value)} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                            <div className="flex gap-2 items-center">
+                              <input type="text" placeholder="Year" value={edu.period} onChange={e => handleEducationChange(idx,'period', e.target.value)} className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                              {formData.education.length > 1 && (
+                                <button type="button" onClick={() => removeEducation(idx)} className="text-red-500 hover:text-red-700 p-1"><X className="w-4 h-4" /></button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <button type="button" onClick={addEducation} className="text-blue-600 hover:underline text-sm mt-1 flex items-center gap-1"><Plus className="w-4 h-4" /> Add Education</button>
+                      </div>
                     </div>
                   </>
                 )}
 
+                {/* Documents Tab */}
                 {activeTab === 'documents' && (
                   <>
                     {['cv','passport','picture','drivingLicense'].map(fileType => (
@@ -345,37 +388,37 @@ const ManagedCandidates = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1">Name</label><p className="text-gray-800">{viewingCandidate.name}</p></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><p className="text-gray-800">{viewingCandidate.email}</p></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><p className="text-gray-800">{viewingCandidate.phone || 'Not provided'}</p></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Experience</label><p className="text-gray-800">{viewingCandidate.experience || 'Not provided'}</p></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><p className="text-gray-800">{viewingCandidate.phone || ''}</p></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Experience</label><p className="text-gray-800">{viewingCandidate.experience || ''}</p></div>
                 </div>
+
                 {viewingCandidate.skills && <div><label className="block text-sm font-medium text-gray-700 mb-2">Skills</label><div className="flex flex-wrap gap-2">{(Array.isArray(viewingCandidate.skills)? viewingCandidate.skills : viewingCandidate.skills.split(',')).map((s,i)=><span key={i} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{s.trim()}</span>)}</div></div>}
-                {viewingCandidate.qualifications && <div><label className="block text-sm font-medium text-gray-700 mb-2">Qualifications</label><div className="flex flex-wrap gap-2">{(Array.isArray(viewingCandidate.qualifications)? viewingCandidate.qualifications : viewingCandidate.qualifications.split(',')).map((q,i)=><span key={i} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{q.trim()}</span>)}</div></div>}
-                {viewingCandidate.address && <div><label className="block text-sm font-medium text-gray-700 mb-1">Address</label><p className="text-gray-800">{viewingCandidate.address}</p></div>}
+
+                {/* Education */} 
+                {viewingCandidate.education && viewingCandidate.education.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
+                    <div className="flex flex-wrap gap-2">
+                      {viewingCandidate.education.map((edu,i)=>(<span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">{edu.degree} - {edu.institution} ({edu.year})</span>))}
+                    </div>
+                  </div>
+                )}
+
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Added Date</label><p className="text-gray-800">{formatDate(viewingCandidate.addedAt)}</p></div>
 
                 {viewingCandidate.documents && viewingCandidate.documents.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Documents</label>
                     <div className="flex flex-wrap gap-2">
-                      {viewingCandidate.documents.map((doc, i) => (
-                        doc.type === 'Picture' ? (
-                          <img key={i} src={doc.fileUrl} alt={doc.type} className="w-20 h-20 object-cover rounded-md border" />
-                        ) : (
-                          <a key={i} href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                            <FileText className="w-4 h-4" /> {doc.type}
-                          </a>
-                        )
-                      ))}
+                      {viewingCandidate.documents.map((doc, i) => (doc.type === 'Picture' ? <img key={i} src={doc.fileUrl} alt={doc.type} className="w-20 h-20 object-cover rounded-md border" /> : <a key={i} href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"><FileText className="w-4 h-4" /> {doc.type}</a>))}
                     </div>
                   </div>
                 )}
-
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 };

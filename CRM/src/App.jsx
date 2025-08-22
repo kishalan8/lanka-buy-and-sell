@@ -19,6 +19,10 @@ import EditJob from "./pages/EditJob";
 import ViewJob from "./pages/ViewJob";
 import CandidatePage from "./pages/CandidatePage";
 import AdminChat from "./pages/AdminChat";
+import DashboardDefault from './pages/DashboardDefault';
+import LeadsDetailsPage from "./pages/LeadsDetailsPage";
+import MeetingsPage from "./pages/Meetings";
+import AddMeetingsPage from "./pages/AddMeetingsPage";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -51,6 +55,10 @@ const App = () => {
         <Route path="viewjob" element={<ViewJob />} />
         <Route path="candidatepage" element={<CandidatePage />} />
         <Route path="adminchat" element={<AdminChat />} />
+        <Route path="dashboard" element={<DashboardDefault />} />
+        <Route path="leads/:id" element={<LeadsDetailsPage />} />
+        <Route path="meetings" element={<MeetingsPage />} />
+        <Route path="addmeeting" element={<AddMeetingsPage />} />
       </Route>
 
       {/* Sales Dashboard */}

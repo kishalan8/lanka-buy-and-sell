@@ -105,7 +105,9 @@ const handleEdit = (id) => {
                 <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-700">
                   <span>{job.location}</span>
                   <span>{job.type}</span>
-                  <span className="text-blue-600 font-medium">{job.salary ?? 'N/A'}</span>
+                  <span className="text-blue-600 font-medium">Salary: {job.salary ?? 'N/A'}</span>
+                  <span className="text-blue-600 font-medium">CandidateCost: {job.candidateCost ?? 'N/A'}</span>
+                  <span className="text-blue-600 font-medium">AgentCost: {job.agentCost ?? 'N/A'}</span>
                 </div>
 
                 <div className="mt-2 text-sm text-gray-500">
