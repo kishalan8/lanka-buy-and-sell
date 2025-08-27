@@ -7,7 +7,7 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchUsers = () => {
-    axios.get('http://localhost:5000/api/admin/users')
+    axios.get('http://localhost:5000/api/users/users')
       .then(res => {
         setUsers(res.data);
         setLoading(false);
@@ -27,7 +27,7 @@ const AdminUsers = () => {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/admin/users/${id}`);
+      await axios.delete(`http://localhost:5000/api/users/users/${id}`);
       setUsers(users.filter(user => user._id !== id));
     } catch {
       alert('Failed to delete user');

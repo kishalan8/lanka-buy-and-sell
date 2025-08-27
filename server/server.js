@@ -16,6 +16,7 @@ const adminRoutes = require('./routes/admin');
 const bikesRouter = require('./routes/bikes');
 const submissionRoutes = require('./routes/submissions');
 const sliderImages = require('./routes/sliderImages');
+const usersRouter = require('./routes/users');
 
 dotenv.config();
 const app = express();
@@ -44,6 +45,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/bikes', bikesRouter);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/slider-images', sliderImages);
+app.use('/api/users', usersRouter); // Add this line to include user routes
 //app.use('/api', require('./routes/sliderImagesRoute')); // Adjust path
 
 
