@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 const User = require('./models/User');
 
-mongoose.connect('mongodb://127.0.0.1:27017/lankabuyandsell', {
+mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(async () => {

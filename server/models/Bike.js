@@ -7,6 +7,7 @@ const bikeSchema = new mongoose.Schema({
   year: { type: Number, required: true },
   price: { type: Number, required: true },
   stock: { type: Number, default: 0 },
+  brand: { type: String, enum: ['Yamaha', 'Suzuki', 'KTM', 'Bajaj', 'HeroHonda', 'Honda']},
   condition: { type: String, enum: ['new', 'used'], required: true },
   images: [{ type: String }], // support multiple images
   description: { type: String },

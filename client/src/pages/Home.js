@@ -16,7 +16,7 @@ const Home = () => {
         const bikesRes = await axios.get(`${IMAGE_BASE_URL}/api/bikes`);
         setBikes(bikesRes.data.slice().reverse().slice(0, 8));
 
-        const sliderRes = await axios.get(`${IMAGE_BASE_URL}/api/slider-images`);
+        const sliderRes = await axios.get(`${IMAGE_BASE_URL}/api/slider-images/`);
         setSliderImages(sliderRes.data || []);
       } catch (err) {
         console.error('Error fetching data:', err);

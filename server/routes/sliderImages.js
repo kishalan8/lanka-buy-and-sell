@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/upload-slider-images', upload.array('images', 10), async (req, res) => {
+router.post('/upload', upload.array('images', 10), async (req, res) => {
   try {
     const imagePaths = req.files.map(file => ({
       imageUrl: `uploads/sliders/${file.filename}`,  // make sure folder exists
@@ -40,6 +40,16 @@ router.put('/:id', async (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Update failed', error: err.message });
+  }
+});
+
+// GET all slider images
+router.get('/', async (req, res) => {
+  try {
+    const images = await SliderImage.find().sort({ createdAt: -1 });
+    res.status(200).json(images);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch images', error: err.message });
   }
 });
 
