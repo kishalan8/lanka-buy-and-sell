@@ -74,7 +74,7 @@ const LoginPage = () => {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 font-sans text-gray-800 relative overflow-hidden">
 
       {/* Left side: Hero section with logo and marketing message */}
-      <motion.div
+      {/* <motion.div
         className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 bg-gradient-to-br from-gray-900 via-slate-800 to-blue-950 text-white relative overflow-hidden"
         initial={{ x: "-100vw" }}
         animate={{ x: 0 }}
@@ -137,7 +137,7 @@ const LoginPage = () => {
             ))}
           </motion.div>
         </div>
-      </motion.div>
+      </motion.div> */}
 
       {/* Right side: Login form */}
       <div className="flex-1 flex items-center justify-center p-4 lg:p-16 relative z-10">

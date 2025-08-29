@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
     react({
-      include: /\.(jsx|js)$/, // Add this to process both .js and .jsx as JSX
+      include: /\.(jsx|js|html)$/, // Add this to process both .js and .jsx as JSX
     }),
     tailwindcss(),
   ],

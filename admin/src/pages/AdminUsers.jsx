@@ -1,6 +1,8 @@
 // src/pages/AdminUsers.js
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -34,9 +36,42 @@ const AdminUsers = () => {
     }
   };
 
+  const generateReport = async () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Users Report", 14, 15);
+  
+    const tableColumn = ["Name", "Email"];
+    const tableRows = [];
+  
+    users.forEach(user => {
+      const userData = [
+        user.name,
+        user.email,
+      ];
+      tableRows.push(userData);
+    });
+  
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 25,
+      styles: { fontSize: 10, cellPadding: 3 ,valign: 'middle'},
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+  
+    doc.save("Users_Report.pdf");
+  };
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Registered Users</h2>
+      <button
+          onClick={generateReport}
+          className="bg-purple-600 text-white px-4 py-2 rounded"
+        >
+          Export Report (PDF)
+        </button>
       {loading ? (
         <p>Loading users...</p>
       ) : (

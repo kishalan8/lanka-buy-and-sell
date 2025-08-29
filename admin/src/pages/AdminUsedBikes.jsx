@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const IMAGE_BASE_URL = 'http://localhost:5000/uploads/';
 
@@ -128,6 +130,76 @@ const AdminUsedBikes = () => {
     setForm({ ...form, [field]: val === '' ? '' : Number(val) });
   };
 
+  const getBase64Image = (url) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.setAttribute("crossOrigin", "anonymous"); // avoid CORS issues
+    img.src = url;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg")); // base64 string
+    };
+    img.onerror = (err) => reject(err);
+  });
+};
+
+
+  const generateReport = async () => {
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text("Used Motorbike Inventory Report", 14, 15);
+
+  const tableColumn = ["Bike ID", "Images", "Make", "Model", "Year", "Price", "Stock", "Condition"];
+  const tableRows = [];
+
+  const bikesWithBase64 = await Promise.all(
+    bikes.map(async (bike) => {
+      let base64Img = null;
+      if (bike.images && bike.images.length > 0) {
+        try {
+          base64Img = await getBase64Image(IMAGE_BASE_URL + bike.images[0]); // only first image
+        } catch (e) {
+          console.error("Image load failed:", e);
+        }
+      }
+      return { ...bike, base64Img };
+    })
+  );
+
+  bikes.forEach(bike => {
+    const bikeData = [
+      bike.bikeID || "-",
+      bike.base64Img || "",
+      bike.make,
+      bike.model,
+      bike.year,
+      bike.price,
+      bike.stock,
+      bike.condition,
+    ];
+    tableRows.push(bikeData);
+  });
+
+  autoTable(doc, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: 25,
+    styles: { fontSize: 10, cellPadding: 3 ,valign: 'middle'},
+    headStyles: { fillColor: [41, 128, 185] },
+    didDrawCell: (data) => {
+      if (data.column.index === 1 && data.cell.raw) {
+        doc.addImage(data.cell.raw, "JPEG", data.cell.x + 2, data.cell.y + 2, 20, 15);
+      }
+    },
+  });
+
+  doc.save("Used_Bike_Report.pdf");
+};
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
@@ -137,6 +209,12 @@ const AdminUsedBikes = () => {
           className="bg-blue-600 text-white px-4 py-2 rounded"
         >
           + Add Used Bike
+        </button>
+        <button
+          onClick={generateReport}
+          className="bg-purple-600 text-white px-4 py-2 rounded"
+        >
+          Export Report (PDF)
         </button>
       </div>
 
