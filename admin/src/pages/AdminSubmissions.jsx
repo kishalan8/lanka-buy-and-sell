@@ -1,8 +1,41 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { motion } from "framer-motion";
+import axios from "axios";
+import { jsPDF } from "jspdf";
 
 const AdminSubmissionCard = ({ submission, onUpdateStatus }) => {
+
+  // Generate PDF report
+  const generateReport = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`${submission.brand} ${submission.model} Report`, 10, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Brand: ${submission.brand}`, 10, 30);
+    doc.text(`Model: ${submission.model}`, 10, 40);
+    doc.text(`Year: ${submission.year}`, 10, 50);
+    doc.text(`Price: Rs. ${submission.price?.toLocaleString() || 'N/A'}`, 10, 60);
+    doc.text(`Mileage: ${submission.mileage || 'N/A'}`, 10, 70);
+    doc.text(`Engine Capacity: ${submission.engineCapacity || 'N/A'}`, 10, 80);
+    doc.text(`Condition: ${submission.condition}`, 10, 90);
+    doc.text(`Owner: ${submission.ownerName || 'N/A'}`, 10, 100);
+    doc.text(`Contact: ${submission.ownerContact || 'N/A'}`, 10, 110);
+    doc.text(`Status: ${submission.status}`, 10, 120);
+    doc.text(`Description: ${submission.description || 'N/A'}`, 10, 130);
+
+    if (submission.documents?.length) {
+      let y = 140;
+      doc.text("Documents:", 10, y);
+      submission.documents.forEach((docItem, idx) => {
+        y += 10;
+        doc.text(`${idx + 1}. ${docItem.type} - ${docItem.fileName}`, 10, y);
+      });
+    }
+
+    doc.save(`${submission.brand}_${submission.model}_report.pdf`);
+  };
+
   return (
     <motion.div
       className="bg-white rounded-xl shadow-md p-4 flex flex-col relative border border-gray-200"
@@ -39,9 +72,24 @@ const AdminSubmissionCard = ({ submission, onUpdateStatus }) => {
         {submission.brand} {submission.model}
       </h3>
       <p className="text-sm text-gray-600 mb-2">{submission.description}</p>
+
       <div className="flex justify-between text-gray-700 text-sm mb-2">
         <span>Year: {submission.year}</span>
-        <span>Price: Rs. {submission.price?.toLocaleString()}</span>
+        <span>Price: Rs. {submission.price?.toLocaleString() || "N/A"}</span>
+      </div>
+
+      <div className="flex justify-between text-gray-700 text-sm mb-2">
+        <span>Mileage: {submission.mileage || "N/A"} km</span>
+        <span>Engine: {submission.engineCapacity || "N/A"} cc</span>
+      </div>
+
+      <div className="flex justify-between text-gray-700 text-sm mb-2">
+        <span>Condition: {submission.condition}</span>
+        <span>Owner: {submission.ownerName || "N/A"}</span>
+      </div>
+
+      <div className="text-gray-700 text-sm mb-2">
+        Contact: {submission.ownerContact || "N/A"}
       </div>
 
       {/* Documents */}
@@ -64,41 +112,47 @@ const AdminSubmissionCard = ({ submission, onUpdateStatus }) => {
         </div>
       )}
 
-      {/* Approve / Reject Buttons */}
-      {submission.status === "pending" && (
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={() => onUpdateStatus(submission._id, "approved")}
-            className="px-3 py-1 bg-green-500 text-white rounded text-sm"
-          >
-            Approve
-          </button>
-          <button
-            onClick={() => onUpdateStatus(submission._id, "rejected")}
-            className="px-3 py-1 bg-red-500 text-white rounded text-sm"
-          >
-            Reject
-          </button>
-        </div>
-      )}
+      {/* Approve / Reject / Report Buttons */}
+      <div className="flex gap-2 mt-2">
+        {submission.status === "pending" && (
+          <>
+            <button
+              onClick={() => onUpdateStatus(submission._id, "approved")}
+              className="px-3 py-1 bg-green-500 text-white rounded text-sm"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => onUpdateStatus(submission._id, "rejected")}
+              className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+            >
+              Reject
+            </button>
+          </>
+        )}
+        <button
+          onClick={generateReport}
+          className="px-3 py-1 bg-gray-700 text-white rounded text-sm"
+        >
+          Generate Report
+        </button>
+      </div>
     </motion.div>
   );
 };
 
 const AdminSubmissions = () => {
-  const token = localStorage.getItem("token"); // store admin JWT
+  const token = localStorage.getItem("token");
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
-  // Fetch all submissions from backend
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
       const res = await axios.get("http://localhost:5000/api/submissions", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Extract the data array from response
       setSubmissions(res.data.data || res.data);
     } catch (err) {
       console.error("Error fetching submissions:", err);
@@ -108,7 +162,6 @@ const AdminSubmissions = () => {
     }
   };
 
-  // Handle approve/reject actions
   const handleUpdateStatus = async (id, status) => {
     try {
       const url =
@@ -118,11 +171,8 @@ const AdminSubmissions = () => {
 
       await axios.put(url, {}, { headers: { Authorization: `Bearer ${token}` } });
 
-      // Update UI
       setSubmissions((prev) =>
-        prev.map((sub) =>
-          sub._id === id ? { ...sub, status: status } : sub
-        )
+        prev.map((sub) => (sub._id === id ? { ...sub, status } : sub))
       );
     } catch (err) {
       console.error("Error updating status:", err);
@@ -130,7 +180,6 @@ const AdminSubmissions = () => {
     }
   };
 
-  // Filter submissions based on status
   const filteredSubmissions =
     filter === "all"
       ? submissions

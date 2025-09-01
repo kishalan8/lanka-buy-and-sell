@@ -37,7 +37,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // --- Socket.IO setup ---
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true
   }
@@ -64,8 +64,20 @@ io.on('connection', (socket) => {
   const role = socket.user.role;
   console.log('📡 Client connected:', socket.id, 'User:', userId, 'Role:', role);
 
-  // Auto-join room
+  // Optional: auto-join own room for general notifications
   socket.join(userId);
+
+  // Join a specific user room
+  socket.on('joinRoom', (roomId) => {
+    console.log(`User ${userId} joining room ${roomId}`);
+    socket.join(roomId);
+  });
+
+  // Leave a specific user room
+  socket.on('leaveRoom', (roomId) => {
+    console.log(`User ${userId} leaving room ${roomId}`);
+    socket.leave(roomId);
+  });
 
   // Send message
   socket.on('sendMessage', async ({ content, recipientId }) => {
@@ -76,39 +88,31 @@ io.on('connection', (socket) => {
       let recipientName = '';
       let senderType = role === 'admin' ? 'admin' : 'user';
       let recipientType = senderType === 'admin' ? 'user' : 'admin';
-      let senderModel = senderType === 'admin' ? 'AdminUser' : 'User';
-      let recipientModel = recipientType === 'admin' ? 'AdminUser' : 'User';
 
       // Get sender
-      let sender;
-      if (senderType === 'admin') sender = await AdminUser.findById(userId);
-      else sender = await User.findById(userId);
+      const sender = senderType === 'admin' ? await AdminUser.findById(userId) : await User.findById(userId);
       if (!sender) return socket.emit('messageError', { error: 'Sender not found' });
       senderName = sender.name;
 
       // Get recipient
-      let recipient;
-      if (recipientType === 'admin') recipient = await AdminUser.findById(recipientId);
-      else recipient = await User.findById(recipientId);
+      const recipient = recipientType === 'admin' ? await AdminUser.findById(recipientId) : await User.findById(recipientId);
       if (!recipient) return socket.emit('messageError', { error: 'Recipient not found' });
       recipientName = recipient.name;
 
-      // Create message
+      // Save message
       const newMessage = await Message.create({
         content,
         senderId: userId,
         senderType,
         senderName,
-        senderModel,
         recipientId,
         recipientType,
         recipientName,
-        recipientModel
       });
 
-      // Emit to recipient room and back to sender
+      // Emit to recipient room and sender room
       io.to(recipientId.toString()).emit('receiveMessage', newMessage);
-      socket.emit('messageSent', newMessage);
+      io.to(userId.toString()).emit('messageSent', newMessage);
 
     } catch (err) {
       console.error('❌ sendMessage error:', err);

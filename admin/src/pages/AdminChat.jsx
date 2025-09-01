@@ -32,7 +32,7 @@ const AdminChat = () => {
 
   // Fetch users list
   useEffect(() => {
-    if (!token || !admin) return;
+    if (!token) return;
     const fetchUsers = async () => {
       try {
         const res = await axios.get("http://localhost:5000/api/chats/users", {
@@ -44,35 +44,28 @@ const AdminChat = () => {
       }
     };
     fetchUsers();
-  }, [token, admin]);
+  }, [token]);
 
-  // Setup Socket.IO
+  // Socket.IO connection (connect only once)
   useEffect(() => {
-    if (!token || !admin) return;
+    if (!token) return;
 
     socketRef.current = io("http://localhost:5000", {
       auth: { token },
-      transports: ["websocket"], // prevent disconnect loops
+      transports: ["websocket"],
     });
 
-    socketRef.current.on("connect", () => {
-      console.log("✅ Socket connected:", socketRef.current.id);
-    });
+    socketRef.current.on("connect", () => console.log("✅ Socket connected:", socketRef.current.id));
+    socketRef.current.on("disconnect", (reason) => console.log("Socket disconnected:", reason));
 
-    socketRef.current.on("connect_error", (err) => {
-      console.error("Socket connect_error:", err.message);
-    });
-
-    socketRef.current.on("disconnect", (reason) => {
-      console.log("Socket disconnected:", reason);
-    });
-
+    // Receive messages
     socketRef.current.on("receiveMessage", (msg) => {
       if (selectedUser && (msg.senderId === selectedUser._id || msg.recipientId === selectedUser._id)) {
         setMessages((prev) => [...prev, msg]);
       }
     });
 
+    // Typing indicators
     socketRef.current.on("typing", ({ from }) => {
       if (selectedUser && from === selectedUser._id) setTypingIndicator(true);
     });
@@ -81,12 +74,15 @@ const AdminChat = () => {
     });
 
     return () => socketRef.current.disconnect();
-  }, [token, admin, selectedUser]);
+  }, [token]);
 
-  // Fetch chat history for selected user
+  // Join a room when a user is selected
   useEffect(() => {
-    if (!selectedUser || !token) return;
+    if (!selectedUser || !socketRef.current) return;
 
+    socketRef.current.emit("joinRoom", selectedUser._id);
+
+    // Fetch chat history for selected user
     const fetchMessages = async () => {
       try {
         const res = await axios.get(
@@ -98,11 +94,16 @@ const AdminChat = () => {
         console.error("Failed to fetch messages:", err);
       }
     };
-
     fetchMessages();
+
+    return () => {
+      socketRef.current.emit("leaveRoom", selectedUser._id);
+      setMessages([]);
+      setTypingIndicator(false);
+    };
   }, [selectedUser, token]);
 
-  // Handle sending message
+  // Send message
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser) return;
@@ -121,13 +122,9 @@ const AdminChat = () => {
     };
 
     try {
-      // Emit to Socket.IO
       socketRef.current.emit("sendMessage", message);
-
-      // Update local messages
       setMessages((prev) => [...prev, message]);
 
-      // Save to backend
       await axios.post(
         `http://localhost:5000/api/chats/admin/${selectedUser._id}`,
         { content },
