@@ -3,45 +3,47 @@ const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
 
-// Multer storage configuration for Cloudinary
+// Cloudinary storage configuration
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: (req, file) => {
     let folder;
+
+    // Map fieldname to Cloudinary folder
     switch (file.fieldname) {
-      case 'photo':
-      case 'picture':
-        folder = 'users/profile_photos';
+      case 'Bike Book':
+        folder = 'bikes/documents/bike_books';
         break;
-      case 'passport':
-        folder = 'users/passports';
+      case 'Revenue License':
+        folder = 'bikes/documents/revenue_licenses';
         break;
-      case 'drivingLicense':
-        folder = 'users/licenses';
+      case 'Insurance':
+        folder = 'bikes/documents/insurances';
         break;
-      case 'cv':
-      case 'CV':
-        folder = 'users/cvs';
+      case 'Emmision Test':
+        folder = 'bikes/documents/emission_tests';
+        break;
+      case 'images':
+        folder = 'bikes/images';
         break;
       default:
-        folder = 'user_uploads';
+        folder = 'bikes/others';
     }
 
     return {
       folder: folder,
       allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
       resource_type: 'auto',
-      public_id: `${file.fieldname}_${req.user._id}_${Date.now()}`
+      public_id: `${file.fieldname}_${req.user._id}_${Date.now()}_${Math.floor(Math.random() * 1000)}`
     };
   },
 });
 
-// Multer instance with the storage and limits
+// Multer instance
 const upload = multer({
-  storage: storage,
+  storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 10 // Maximum 10 files per request
+    fileSize: 10 * 1024 * 1024, // 10MB max per file
   },
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
@@ -49,12 +51,23 @@ const upload = multer({
       'application/pdf', 'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
+
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type'));
+      cb(new Error(`Invalid file type: ${file.originalname}`));
     }
-  }
+  },
 });
 
-module.exports = upload;
+// Middleware for multiple fields
+// documents can be multiple, images can be multiple
+const uploadBikeFiles = upload.fields([
+  { name: 'Bike Book', maxCount: 1 },
+  { name: 'Revenue License', maxCount: 1 },
+  { name: 'Insurance', maxCount: 1 },
+  { name: 'Emmision Test', maxCount: 1 },
+  { name: 'images', maxCount: 10 },
+]);
+
+module.exports = uploadBikeFiles; 

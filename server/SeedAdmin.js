@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const AdminUser = require('./models/AdminUser'); // Adjust path if needed
+const Admin = require('./models/Admin'); // Adjust path if needed
 
 async function seedUsers() {
   try {
@@ -10,27 +10,14 @@ async function seedUsers() {
     // Users to seed
     const users = [
       {
-        name: 'Super Admin',
+        name: 'Admin',
         email: 'admin@gmail.com',
         password: 'admin123',
-        role: 'MainAdmin',
-      },
-      {
-        name: 'Sales User',
-        email: 'sales@gmail.com',
-        password: 'sales123',
-        role: 'SalesAdmin',
-      },
-      {
-        name: 'Agent User',
-        email: 'agent@gmail.com',
-        password: 'agent123',
-        role: 'AgentAdmin',
       },
     ];
 
     for (const userData of users) {
-      const existingUser = await AdminUser.findOne({ email: userData.email });
+      const existingUser = await Admin.findOne({ email: userData.email });
       if (existingUser) {
         console.log(`${userData.role} user already exists: ${userData.email}`);
         continue;
@@ -38,11 +25,10 @@ async function seedUsers() {
 
       const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-      const user = new AdminUser({
+      const user = new Admin({
         name: userData.name,
         email: userData.email,
         password: hashedPassword,
-        role: userData.role,
       });
 
       await user.save();
